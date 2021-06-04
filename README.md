@@ -10,9 +10,9 @@ Development guidelines
 
 Typical git procedure
 1. BEFORE making changes, pull the most recent version: 
-git pull origin master
+git pull origin main
 2. After you reach a stopping point (small change where the code is functional), push them:
 git add .
 git commit -m "Type an informative message about your changes here"
-git push origin master
+git push origin main
 
