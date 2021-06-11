@@ -1,6 +1,6 @@
 # EllipticSSF
 
-Authors: Nami Nishimura and Thomas Osburn
+Authors: Nami Nishimura and Thomas Osburn_ 
 
 Development guidelines
 1. We should start with only one file in the directory, "EllipticSSF.wl"
