@@ -92,21 +92,56 @@ fxym[r,\[Theta]]=Coefficient[box[r,\[Theta]],Subscript[\[Psi], ijm]]//Simplify;r
 *)
 
 
-SourceCombined[n_, m_, a_, r0_, rminapp_, rmaxapp_] := (* re-implemented for package friendliness *)Module[
+getGridParams[n_, a_, r0_, rminapp_, rmaxapp_, d_] :=
+  Module[{iMax, jMax, \[CapitalDelta]\[Theta], \[CapitalDelta]rStar, rStarMin, rStarMax, rStarSourceMin,
+     rStarSourceMax, \[Theta]sourceRatio, \[Theta]sourceNum, \[CapitalDelta]\[Theta]\[CapitalDelta]rstarRatio, l, M, rplus,
+     rminus, rtorstar, r0star, rStarSourceNum, rStarFactorMinus, rStarFactorPlus,
+     \[Theta]SourceMin, \[Theta]SourceMax, jSourceStart, jSourceEnd, iSourceStart, iSourceEnd
+    },
+    \[Theta]sourceRatio = 3;(* adjust theta source width *)
+    \[Theta]sourceNum = 2 n + 1;
+    \[CapitalDelta]\[Theta] = \[Pi] / (\[Theta]sourceRatio \[Theta]sourceNum);
+    \[CapitalDelta]\[Theta]\[CapitalDelta]rstarRatio = 0.18; (* adjust ratio of \[CapitalDelta]\[Theta] and \[CapitalDelta]rstar *)
+    l = Floor[\[CapitalDelta]\[Theta]\[CapitalDelta]rstarRatio d \[Theta]sourceRatio / (2 \[Pi])];
+    rStarSourceNum = (2 l + 1) (2 n + 1);
+    \[CapitalDelta]rStar = d / rStarSourceNum;
+    M = 1;
+    rplus = M + Sqrt[M^2 - a^2];
+    rminus = M - Sqrt[M^2 - a^2];
+    rtorstar[r_] := r + (2 M) / (rplus - rminus) (rplus Log[(r - rplus
+      ) / (2 M)] - rminus Log[(r - rminus) / (2 M)]);
+    r0star = rtorstar[r0];
+    \[Theta]SourceMin = \[Pi] / 2 - \[CapitalDelta]\[Theta] / 2 - \[CapitalDelta]\[Theta] (\[Theta]sourceNum - 1) / 2;
+    \[Theta]SourceMax = \[Pi] / 2 + \[CapitalDelta]\[Theta] / 2 + \[CapitalDelta]\[Theta] (\[Theta]sourceNum - 1) / 2;
+    rStarSourceMin = r0star - \[CapitalDelta]rStar / 2 - \[CapitalDelta]rStar (rStarSourceNum - 1
+      ) / 2;
+    rStarSourceMax = r0star + \[CapitalDelta]rStar / 2 + \[CapitalDelta]rStar (rStarSourceNum - 1
+      ) / 2;
+    rStarFactorMinus = Ceiling[(rStarSourceMin - rminapp) / d];
+    rStarFactorPlus = Ceiling[(rmaxapp - rStarSourceMax) / d];
+    rStarMin = rStarSourceMin - rStarFactorMinus * d;
+    rStarMax = rStarFactorPlus * d + rStarSourceMax;
+    iMax = 1 + Round[(rStarMax - rStarMin) / \[CapitalDelta]rStar];
+    jSourceStart = \[Theta]SourceMin / \[CapitalDelta]\[Theta];
+    jSourceEnd = \[Theta]SourceMax / \[CapitalDelta]\[Theta];
+    jMax = 1 + Round[\[Pi] / \[CapitalDelta]\[Theta]];
+    iSourceStart = Round[(rStarSourceMin - rStarMin) / \[CapitalDelta]rStar] + 1;
+    iSourceEnd = iSourceStart + rStarSourceNum - 1;
+    Return[{iMax, jMax, \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], iSourceStart, iSourceEnd, jSourceStart,
+       jSourceEnd, rStarMin, rStarMax}]
+  ]; 
+
+
+SourceCombined[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] := (* re-implemented for package friendliness *)Module[
   {rplus, rminus, rtorstar, r0star, rsmin, rsmax, rstartor, listr, listrsource,
    \[Theta]smin, \[Theta]smax, imax, jmax, rsourcestart, rsourceend, listSeff1, SourceMatrix1,
    i, j, r, LeftBC, RightBC, TopBC, BottomBC, SecondTopBC, SecondBottomBC,
    SecondLeftBC, SourceBC1, SecondRightBC, Sourcelist, \[CapitalDelta]\[Theta], \[Theta]sourcegrid,
-   l, \[CapitalDelta]rstar, d, rmatrixfactorminus, rmatrixfactorplus, rsSourceMin, rsSourceMax, \[Theta]start,
-   \[Theta]end, M, v, \[CapitalOmega], guess},
+   l, \[CapitalDelta]rstar, rmatrixfactorminus, rmatrixfactorplus, rsSourceMin, rsSourceMax,
+   \[Theta]start, \[Theta]end, M, v, \[CapitalOmega], guess},
     M = 1;
     v = 1 / Sqrt[r0];
     \[CapitalOmega] = v^3 / (1 + a v^3);
-    \[CapitalDelta]\[Theta] = \[Pi] / (5 (2 n + 1));
-    \[Theta]sourcegrid = 2 n + 1;
-    l = 3 n + 1;
-    \[CapitalDelta]rstar = d / (2 l + 1);
-    d = 6 / 5 3 M;
     rplus = M + Sqrt[M^2 - a^2];
     rminus = M - Sqrt[M^2 - a^2];
     rtorstar[r_] := r + (2 M) / (rplus - rminus) (rplus Log[(r - rplus
@@ -129,29 +164,24 @@ SourceCombined[n_, m_, a_, r0_, rminapp_, rmaxapp_] := (* re-implemented for pac
       ];
     rstartor[rstar_] :=
       If[rstar < -50,
-        guess[rstar]
+        r /. Flatten[NSolve[(rtorstar[r] - rstar) == 0 && r >= rplus, r, Reals]]
         ,
-        r /. FindRoot[rtorstar[r] - rstar == 0, {r, guess[rstar]}, Method
+        r /. FindRoot[1 - rstar/rtorstar[r] == 0, {r, guess[rstar]}, Method
            -> "Newton", AccuracyGoal -> 13, PrecisionGoal -> 13]
       ];
     r0star = rtorstar[r0];
-    \[Theta]smin = \[Pi] / 2 - \[CapitalDelta]\[Theta] / 2 - n * \[CapitalDelta]\[Theta];
-    \[Theta]smax = \[Pi] / 2 + \[CapitalDelta]\[Theta] / 2 + n * \[CapitalDelta]\[Theta];
-    rsSourceMin = r0star - \[CapitalDelta]rstar / 2 - l * \[CapitalDelta]rstar;
-    rsSourceMax = r0star + \[CapitalDelta]rstar / 2 + l * \[CapitalDelta]rstar;
-    rmatrixfactorminus = Floor[(rsSourceMin - rminapp) / d] + 1;
-    rmatrixfactorplus = Floor[(rmaxapp - rsSourceMax) / d] + 1;
-    rsmin = rsSourceMin - (rmatrixfactorminus - 1) * d;
-    rsmax = (rmatrixfactorplus - 1) * d + rsSourceMax;
-    imax = Floor[(rsmax - rsmin) / \[CapitalDelta]rstar + 1];
-    \[Theta]start = \[Theta]smin / \[CapitalDelta]\[Theta];
-    \[Theta]end = \[Theta]smax / \[CapitalDelta]\[Theta];
-    jmax = Floor[\[Pi] / \[CapitalDelta]\[Theta] + 1];
-    listr = Table[Re[rstartor[rstar]], {rstar, rsmin, rsmax, \[CapitalDelta]rstar}];
-    listrsource = Table[Re[rstartor[rstar]], {rstar, rsSourceMin, rsSourceMax, \[CapitalDelta]rstar
-      }];
+    {imax, jmax, \[CapitalDelta]rstar, \[CapitalDelta]\[Theta], rsourcestart, rsourceend, \[Theta]start, \[Theta]end, 
+      rsmin, rsmax} = getGridParams[n, a, r0, rminapp, rmaxapp, d];
+    listr = Table[Re[rstartor[rstar]], {rstar, rsmin, rsmax, \[CapitalDelta]rstar}]
+      ;
+    rsSourceMin = rsmin + (rsourcestart - 1) \[CapitalDelta]rstar;
+    rsSourceMax = rsmin + (rsourceend - 1) \[CapitalDelta]rstar;
+    listrsource = Table[Re[rstartor[rstar]], {rstar, rsSourceMin, rsSourceMax,
+       \[CapitalDelta]rstar}];
     rsourcestart = Floor[(rsSourceMin - rsmin) / \[CapitalDelta]rstar + 1];
     rsourceend = rsourcestart + Length[listrsource] - 1;
+    \[Theta]smin = (\[Theta]start - 1) \[CapitalDelta]\[Theta];
+    \[Theta]smax = (\[Theta]end - 1) \[CapitalDelta]\[Theta];
     listSeff1 = Table[scaledSeffm[m, listrsource[[i]], N[j]], {i, 1, 
       Length[listrsource]}, {j, \[Theta]smin, \[Theta]smax, \[CapitalDelta]\[Theta]}];
     SourceMatrix1 = SparseArray[Flatten[Table[{i + rsourcestart - 1, 
@@ -201,38 +231,25 @@ SourceCombined[n_, m_, a_, r0_, rminapp_, rmaxapp_] := (* re-implemented for pac
 (* original version: SourceCombined[n_,m_] := ... *)
 
 
-CouplingMatrix[n_, m_, a_, r0_, rminapp_, rmaxapp_] := Module[
-  {rplus, rminus, rtorstar, r0star, rstarmin1, rstarmax1, rsmin1, rsmax1,
-   \[Theta]smin, \[Theta]smax, imax, jmax, listr1, listrsource1, MxBC, rstartor, listr,
-   listrsource, xBC1, xBC2, xBC3, yBC1, yBC2, yBC3, \[Omega], d, rsmin, rsmax,
-   rsSourceMin, rsSourceMax, \[CapitalDelta]\[Theta], \[Theta]sourcegrid, l, \[CapitalDelta]rstar, rsourcegrid, rmatrixfactorminus,
-   rmatrixfactorplus, M, v, \[CapitalOmega], listTheta, mat1, mat2, diag, rightDiag, 
-  leftDiag, rightSkipDiag, leftSkipDiag, guess},
+CouplingMatrix[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] :=
+  Module[{rplus, rminus, rtorstar, r0star, imax, jmax, listr1, MxBC, 
+    rstartor, xBC1, xBC2, xBC3, yBC1, yBC2, yBC3, \[Omega], rsmin, rsmax, rsSourceMin,
+     rsSourceMax, \[CapitalDelta]\[Theta], \[CapitalDelta]rstar, M, v, \[CapitalOmega], listTheta, diag, rightDiag, leftDiag,
+     rightSkipDiag, leftSkipDiag, guess, rsourcestart, rsourceend, \[Theta]start,
+     \[Theta]end},
     M = 1;
     v = 1 / Sqrt[r0];
     \[CapitalOmega] = v^3 / (1 + a v^3);
     \[Omega] = m * \[CapitalOmega];
-    \[CapitalDelta]\[Theta] = \[Pi] / (5 (2 n + 1));
-    \[Theta]sourcegrid = 2 n + 1;
-    l = 3 n + 1;
-    \[CapitalDelta]rstar = d / (2 l + 1);
-    rsourcegrid = 2 l + 1;
-    d = 6 / 5 3 M;
     rplus = M + Sqrt[M^2 - a^2];
     rminus = M - Sqrt[M^2 - a^2];
     rtorstar[r_] := r + (2 M) / (rplus - rminus) (rplus Log[(r - rplus
       ) / (2 M)] - rminus Log[(r - rminus) / (2 M)]);
     r0star = rtorstar[r0];
-    \[Theta]smin = \[Pi] / 2 - \[CapitalDelta]\[Theta] / 2 - n * \[CapitalDelta]\[Theta];
-    \[Theta]smax = \[Pi] / 2 + \[CapitalDelta]\[Theta] / 2 + n * \[CapitalDelta]\[Theta];
-    rsSourceMin = r0star - \[CapitalDelta]rstar / 2 - l * \[CapitalDelta]rstar;
-    rsSourceMax = r0star + \[CapitalDelta]rstar / 2 + l * \[CapitalDelta]rstar;
-    rmatrixfactorminus = Floor[(rsSourceMin - rminapp) / d] + 1;
-    rmatrixfactorplus = Floor[(rmaxapp - rsSourceMax) / d] + 1;
-    rsmin = rsSourceMin - (rmatrixfactorminus - 1) * d;
-    rsmax = (rmatrixfactorplus - 1) * d + rsSourceMax;
-    imax = Floor[(rsmax - rsmin) / \[CapitalDelta]rstar];
-    jmax = Floor[\[Pi] / \[CapitalDelta]\[Theta]];
+    {imax, jmax, \[CapitalDelta]rstar, \[CapitalDelta]\[Theta], rsourcestart, rsourceend, \[Theta]start, \[Theta]end, 
+      rsmin, rsmax} = getGridParams[n, a, r0, rminapp, rmaxapp, d];
+    imax = imax - 1;
+    jmax = jmax - 1;
     guess[rstar_] :=
       If[rstar <= -2,
         rplus + 2 * (1 - a^2)^(1 / rplus - 1 / 2) Exp[(a^2 - rplus + 
@@ -246,13 +263,13 @@ CouplingMatrix[n_, m_, a_, r0_, rminapp_, rmaxapp_] := Module[
       ];
     rstartor[rstar_] :=
       If[rstar < -50,
-        guess[rstar]
+        r /. Flatten[NSolve[rtorstar[r] - rstar == 0 && r >= rplus, r, Reals]]
         ,
-        r /. FindRoot[rtorstar[r] - rstar == 0, {r, guess[rstar]}, Method
+        r /. FindRoot[1 - rstar/rtorstar[r] == 0, {r, guess[rstar]}, Method
            -> "Newton", AccuracyGoal -> 13, PrecisionGoal -> 13]
       ];
-    listr1 = Table[Re[rstartor[rstar]], {rstar, rsmin + \[CapitalDelta]rstar,
-       rsmax - \[CapitalDelta]rstar, \[CapitalDelta]rstar}];
+    listr1 = Table[Re[rstartor[rsmin + i * \[CapitalDelta]rstar]], {i, 1, imax - 1}
+      ];
     listTheta = Table[j * \[CapitalDelta]\[Theta], {j, 1, jmax - 1}];
     xBC1 = 3.0 - 2 I \[CapitalDelta]rstar \[Omega];
     xBC2 = -4.0;
@@ -275,33 +292,33 @@ CouplingMatrix[n_, m_, a_, r0_, rminapp_, rmaxapp_] := Module[
         ,
         0
       ];
-    diag = Flatten[ArrayPad[Transpose[Table[(a^2 m^2 listr1^2
-       (a^2 + listr1 (-2 M + listr1)) \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 \[CapitalOmega]^2 + (2 listr1^2 (a^2 
-      + listr1 (-2 M + listr1)) \[CapitalDelta]rstar^2 + 2 (listr1^2 (a^2 + listr1^2)^2 -
-       (a^2 - I a m listr1 - M listr1) (a^2 + listr1 (-2 M + listr1)) \[CapitalDelta]rstar
-      ^2) \[CapitalDelta]\[Theta]^2 + 4 a m^2 M listr1^3 \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 \[CapitalOmega] - m^2 listr1^2 (a^2 + listr1
-      ^2)^2 \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 \[CapitalOmega]^2) Csc[theta]^2 + m^2 listr1^2 (a^2 + listr1 (-
-      2 M + listr1)) \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 Csc[theta]^4) / (listr1^2 \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 
-      (-a^2 (a^2 + listr1 (-2 M + listr1)) + (a^2 + listr1^2)^2 Csc[theta]^
-      2)), {theta, listTheta}]], 1]];
-    rightDiag = Flatten[ArrayPad[Transpose[Table[(a^2 + listr1
-       (-2 M + listr1)) (2 + \[CapitalDelta]\[Theta] Cot[theta]) / (2 \[CapitalDelta]\[Theta]^2 (-(a^2 + listr1^2)^2 
-      + a^2 (a^2 + listr1 (-2 M + listr1)) Sin[theta]^2)), {theta, listTheta
-      }]], 1]];
-    leftDiag = Flatten[ArrayPad[Transpose[Table[-(a^2 + listr1
-       (-2 M + listr1)) (-2 + \[CapitalDelta]\[Theta] Cot[theta]) / (2 \[CapitalDelta]\[Theta]^2 (-(a^2 + listr1^2)^2
-       + a^2 (a^2 + listr1 (-2 M + listr1)) Sin[theta]^2)), {theta, listTheta
-      }]], 1]];
-    rightSkipDiag = Flatten[ArrayPad[Transpose[Table[(-listr1
-       (a^2 + listr1^2)^2 + a (a^3 - I a^2 m listr1 - I m listr1^3 + a listr1
-       (-2 M + listr1)) \[CapitalDelta]rstar) / (listr1 \[CapitalDelta]rstar^2 ((a^2 + listr1^2)^2 - a^
-      2 (a^2 + listr1 (-2 M + listr1)) Sin[theta]^2)), {theta, listTheta}]],
-       {{1, 0}, {1, 1}}]];
-    leftSkipDiag = Flatten[ArrayPad[Transpose[Table[-(listr1 
-      (a^2 + listr1^2)^2 + a (a^3 - I a^2 m listr1 - I m listr1^3 + a listr1
-       (-2 M + listr1)) \[CapitalDelta]rstar) / (listr1 \[CapitalDelta]rstar^2 ((a^2 + listr1^2)^2 - a^
-      2 (a^2 + listr1 (-2 M + listr1)) Sin[theta]^2)), {theta, listTheta}]],
-       {{0, 1}, {1, 1}}]];
+    diag = Flatten[ArrayPad[Transpose[Table[(a^2 m^2 listr1^2 (a^2 + 
+      listr1 (-2 M + listr1)) \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 \[CapitalOmega]^2 + (2 listr1^2 (a^2 + listr1
+       (-2 M + listr1)) \[CapitalDelta]rstar^2 + 2 (listr1^2 (a^2 + listr1^2)^2 - (a^2 - 
+      I a m listr1 - M listr1) (a^2 + listr1 (-2 M + listr1)) \[CapitalDelta]rstar^2) \[CapitalDelta]\[Theta]^
+      2 + 4 a m^2 M listr1^3 \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 \[CapitalOmega] - m^2 listr1^2 (a^2 + listr1^2
+      )^2 \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 \[CapitalOmega]^2) Csc[theta]^2 + m^2 listr1^2 (a^2 + listr1 (-2 
+      M + listr1)) \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 Csc[theta]^4) / (listr1^2 \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 (-
+      a^2 (a^2 + listr1 (-2 M + listr1)) + (a^2 + listr1^2)^2 Csc[theta]^2)
+      ), {theta, listTheta}]], 1]];
+    rightDiag = Flatten[ArrayPad[Transpose[Table[(a^2 + listr1 (-2 M 
+      + listr1)) (2 + \[CapitalDelta]\[Theta] Cot[theta]) / (2 \[CapitalDelta]\[Theta]^2 (-(a^2 + listr1^2)^2 + a^2 (
+      a^2 + listr1 (-2 M + listr1)) Sin[theta]^2)), {theta, listTheta}]], 1
+      ]];
+    leftDiag = Flatten[ArrayPad[Transpose[Table[-(a^2 + listr1 (-2 M 
+      + listr1)) (-2 + \[CapitalDelta]\[Theta] Cot[theta]) / (2 \[CapitalDelta]\[Theta]^2 (-(a^2 + listr1^2)^2 + a^2 
+      (a^2 + listr1 (-2 M + listr1)) Sin[theta]^2)), {theta, listTheta}]], 
+      1]];
+    rightSkipDiag = Flatten[ArrayPad[Transpose[Table[(-listr1 (a^2 + 
+      listr1^2)^2 + a (a^3 - I a^2 m listr1 - I m listr1^3 + a listr1 (-2 M
+       + listr1)) \[CapitalDelta]rstar) / (listr1 \[CapitalDelta]rstar^2 ((a^2 + listr1^2)^2 - a^2 (a^2
+       + listr1 (-2 M + listr1)) Sin[theta]^2)), {theta, listTheta}]], {{1,
+       0}, {1, 1}}]];
+    leftSkipDiag = Flatten[ArrayPad[Transpose[Table[-(listr1 (a^2 + listr1
+      ^2)^2 + a (a^3 - I a^2 m listr1 - I m listr1^3 + a listr1 (-2 M + listr1
+      )) \[CapitalDelta]rstar) / (listr1 \[CapitalDelta]rstar^2 ((a^2 + listr1^2)^2 - a^2 (a^2 + listr1
+       (-2 M + listr1)) Sin[theta]^2)), {theta, listTheta}]], {{0, 1}, {1, 
+      1}}]];
     MxBC = SparseArray[{Band[{1, 1}, {(jmax + 1), (jmax + 1)}] -> xBC1,
        Band[{1 + imax + imax jmax, 1 + imax + imax jmax}, {(imax + 1) (jmax
        + 1), (imax + 1) (jmax + 1)}] -> xBC1, Band[{1, jmax + 2}, {(jmax + 
@@ -330,37 +347,24 @@ CouplingMatrix[n_, m_, a_, r0_, rminapp_, rmaxapp_] := Module[
   ]
 
 
-CouplingMatrixOld[n_, m_, a_, r0_, rminapp_, rmaxapp_] := (* re-implemented for package-friendliness *)Module[
-  {rplus, rminus, rtorstar, r0star, rstarmin1, rstarmax1, rsmin1, rsmax1,
-   \[Theta]smin, \[Theta]smax, imax, jmax, listr1, listrsource1, MxBC, rstartor, listr,
-   listrsource, xBC1, xBC2, xBC3, yBC1, yBC2, yBC3, \[Omega], d, rsmin,
-   rsmax, rsSourceMin, rsSourceMax, \[CapitalDelta]\[Theta], \[Theta]sourcegrid, l, \[CapitalDelta]rstar, rsourcegrid, rmatrixfactorminus,
-   rmatrixfactorplus, M, v, \[CapitalOmega], guess},
+CouplingMatrixOld[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] := (* re-implemented for package-friendliness *)Module[
+  {rplus, rminus, rtorstar, r0star, imax, jmax, listr1, MxBC,
+     rstartor, xBC1, xBC2, xBC3, yBC1, yBC2, yBC3, \[Omega], rsmin, rsmax, rsSourceMin,
+     rsSourceMax, \[CapitalDelta]\[Theta], \[CapitalDelta]rstar, M, v, \[CapitalOmega], guess, rsourcestart, rsourceend, \[Theta]start,
+     \[Theta]end},
     M = 1;
     v = 1 / Sqrt[r0];
     \[CapitalOmega] = v^3 / (1 + a v^3);
     \[Omega] = m * \[CapitalOmega];
-    \[CapitalDelta]\[Theta] = \[Pi] / (5 (2 n + 1));
-    \[Theta]sourcegrid = 2 n + 1;
-    l = 3 n + 1;
-    \[CapitalDelta]rstar = d / (2 l + 1);
-    rsourcegrid = 2 l + 1;
-    d = 6 / 5 3 M;
     rplus = M + Sqrt[M^2 - a^2];
     rminus = M - Sqrt[M^2 - a^2];
     rtorstar[r_] := r + (2 M) / (rplus - rminus) (rplus Log[(r - rplus
       ) / (2 M)] - rminus Log[(r - rminus) / (2 M)]);
     r0star = rtorstar[r0];
-    \[Theta]smin = \[Pi] / 2 - \[CapitalDelta]\[Theta] / 2 - n * \[CapitalDelta]\[Theta];
-    \[Theta]smax = \[Pi] / 2 + \[CapitalDelta]\[Theta] / 2 + n * \[CapitalDelta]\[Theta];
-    rsSourceMin = r0star - \[CapitalDelta]rstar / 2 - l * \[CapitalDelta]rstar;
-    rsSourceMax = r0star + \[CapitalDelta]rstar / 2 + l * \[CapitalDelta]rstar;
-    rmatrixfactorminus = Floor[(rsSourceMin - rminapp) / d] + 1;
-    rmatrixfactorplus = Floor[(rmaxapp - rsSourceMax) / d] + 1;
-    rsmin = rsSourceMin - (rmatrixfactorminus - 1) * d;
-    rsmax = (rmatrixfactorplus - 1) * d + rsSourceMax;
-    imax = Floor[(rsmax - rsmin) / \[CapitalDelta]rstar];
-    jmax = Floor[\[Pi] / \[CapitalDelta]\[Theta]];
+    {imax, jmax, \[CapitalDelta]rstar, \[CapitalDelta]\[Theta], rsourcestart, rsourceend, \[Theta]start, \[Theta]end, 
+      rsmin, rsmax} = getGridParams[n, a, r0, rminapp, rmaxapp, d];
+    imax = imax - 1;
+    jmax = jmax - 1;
     guess[rstar_] :=
       If[rstar <= -2,
         rplus + 2 * (1 - a^2)^(1 / rplus - 1 / 2) Exp[(a^2 - rplus + 
@@ -374,12 +378,13 @@ CouplingMatrixOld[n_, m_, a_, r0_, rminapp_, rmaxapp_] := (* re-implemented for 
       ];
     rstartor[rstar_] :=
       If[rstar < -50,
-        guess[rstar]
+        r /. Flatten[NSolve[rtorstar[r] - rstar == 0 && r >= rplus, r, Reals]]
         ,
-        r /. FindRoot[rtorstar[r] - rstar == 0, {r, guess[rstar]}, Method
+        r /. FindRoot[1 - rstar/rtorstar[r] == 0, {r, guess[rstar]}, Method
            -> "Newton", AccuracyGoal -> 13, PrecisionGoal -> 13]
       ];
-    listr1 = Table[Re[rstartor[rstar]], {rstar, rsmin, rsmax, \[CapitalDelta]rstar}];
+    listr1 = Table[Re[rstartor[rstar]], {rstar, rsmin, rsmax, \[CapitalDelta]rstar}
+      ];
     xBC1 = 3 - 2 I \[CapitalDelta]rstar \[Omega];
     xBC2 = -4;
     xBC3 = 1;
@@ -444,12 +449,13 @@ CouplingMatrixOld[n_, m_, a_, r0_, rminapp_, rmaxapp_] := (* re-implemented for 
 (* original version: CouplingMatrix[n_,m_] := ... *)
 
 
-\[Psi]FDA[n_, m_, a_, r0_, rminapp_, rmaxapp_] := (* re-implemented for package-friendliness *)Module[
-  {final\[Psi]1, jmax, \[CapitalDelta]\[Theta]},
-    \[CapitalDelta]\[Theta] = \[Pi] / (5 (2 n + 1));
-    jmax = Floor[\[Pi] / \[CapitalDelta]\[Theta] + 1];
+\[Psi]FDA[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] := (* re-implemented for package-friendliness *)Module[
+  {final\[Psi]1,imax, jmax, \[CapitalDelta]rstar, \[CapitalDelta]\[Theta], rsourcestart, rsourceend, \[Theta]start, \[Theta]end, 
+      rsmin, rsmax},
+    {imax, jmax, \[CapitalDelta]rstar, \[CapitalDelta]\[Theta], rsourcestart, rsourceend, \[Theta]start, \[Theta]end, 
+      rsmin, rsmax} = getGridParams[n, a, r0, rminapp, rmaxapp, d];
     final\[Psi]1 = Partition[LinearSolve[CouplingMatrix[n, m, a, r0, rminapp,
-       rmaxapp], SourceCombined[n, m, a, r0, rminapp, rmaxapp], Method -> "Pardiso"
+       rmaxapp, d], SourceCombined[n, m, a, r0, rminapp, rmaxapp, d], Method -> "Pardiso"
       ], jmax];
     Return[final\[Psi]1]
   ]
@@ -457,10 +463,10 @@ CouplingMatrixOld[n_, m_, a_, r0_, rminapp_, rmaxapp_] := (* re-implemented for 
 (* original version: \[Psi]FDA[n_,m_] := ... *)
 
 
-\[Psi]atr\[Theta][n_, m_, a_, r0_, rminapp_, rmaxapp_] := (* re-implemented for package-friendliness *)Module[
+\[Psi]atr\[Theta][n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] := (* re-implemented for package-friendliness *)Module[
   {imax, rstarmax, rstarmin, r0star, jmax, rplus, rminus, rtorstar, listr,
    rstartor, listrstar, list\[Theta], function\[CapitalPsi], d\[CapitalPsi]r, \[CurlyPhi], \[CapitalDelta], \[Psi]inr\[Theta]1try1,
-   \[CapitalDelta]rstar, \[CapitalDelta]\[Theta], d, rmatrixfactorminus, rmatrixfactorplus, rsmin, rsmax,
+   \[CapitalDelta]rstar, \[CapitalDelta]\[Theta], rmatrixfactorminus, rmatrixfactorplus, rsmin, rsmax,
   l, M, v, \[CapitalOmega], \[Psi]values, rsSourceMin, rsSourceMax, guess},
     M = 1;
     v = 1 / Sqrt[r0];
@@ -493,9 +499,9 @@ CouplingMatrixOld[n_, m_, a_, r0_, rminapp_, rmaxapp_] := (* re-implemented for 
       ];
     rstartor[rstar_] :=
       If[rstar < -50,
-        guess[rstar]
+        r /. Flatten[NSolve[rtorstar[r] - rstar == 0 && r >= rplus, r, Reals]]
         ,
-        r /. FindRoot[rtorstar[r] - rstar == 0, {r, guess[rstar]}, Method
+        r /. FindRoot[1 - rstar/rtorstar[r] == 0, {r, guess[rstar]}, Method
            -> "Newton", AccuracyGoal -> 13, PrecisionGoal -> 13]
       ];
     imax = Floor[(rsmax - rsmin) / \[CapitalDelta]rstar + 1];
@@ -505,7 +511,7 @@ CouplingMatrixOld[n_, m_, a_, r0_, rminapp_, rmaxapp_] := (* re-implemented for 
     list\[Theta] = Table[(j - 1) \[CapitalDelta]\[Theta], {j, 1, jmax}];
     \[CurlyPhi][r_] := a / (rplus - rminus) Log[(r - rplus) / (r - rminus)];
     \[CapitalDelta][r_] := r^2 - 2 M r + a^2;
-    \[Psi]values = \[Psi]FDA[n, m, a, r0, rminapp, rmaxapp];
+    \[Psi]values = \[Psi]FDA[n, m, a, r0, rminapp, rmaxapp, d];
     {\[Psi]inr\[Theta]1try1 = Flatten[Table[{listrstar[[i]], list\[Theta][[j]], 2 * \[Psi]values[[
       i, j]]}, {i, 1, imax}, {j, 1, Length[list\[Theta]]}], 1], imax, jmax, \[CapitalDelta]rstar,
        \[CapitalDelta]\[Theta]}
@@ -514,8 +520,8 @@ CouplingMatrixOld[n_, m_, a_, r0_, rminapp_, rmaxapp_] := (* re-implemented for 
 (* original version: \[Psi]atr\[Theta][n_,m_] := ... *)
 
 
-ssf[n_, m_, a_, r0_, rminapp_, rmaxapp_] :=
-  Module[{\[Psi]valuesatr\[Theta], function\[Psi], r0star, M, \[CapitalDelta]\[Theta], l, d, \[CapitalDelta]rstar, d\[CapitalPsi]r, rplus,
+ssf[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] :=
+  Module[{\[Psi]valuesatr\[Theta], function\[Psi], r0star, M, \[CapitalDelta]\[Theta], l, \[CapitalDelta]rstar, d\[CapitalPsi]r, rplus,
      rminus, d\[Phi]r1, d\[Phi]\[Theta], d\[Phi]\[Phi]},
     M = 1;
     rplus = M + Sqrt[M^2 - a^2];
@@ -524,7 +530,7 @@ ssf[n_, m_, a_, r0_, rminapp_, rmaxapp_] :=
     l = 3 n + 1;
     d = (6 / 5) 3 M;
     \[CapitalDelta]rstar = d / (2 l + 1);
-    \[Psi]valuesatr\[Theta] = \[Psi]atr\[Theta][n, m, a, r0, rminapp, rmaxapp];
+    \[Psi]valuesatr\[Theta] = \[Psi]atr\[Theta][n, m, a, r0, rminapp, rmaxapp, d];
     function\[Psi] = Interpolation[\[Psi]valuesatr\[Theta][[1]]];
     r0star = r0 + (2 M) / (rplus - rminus) (rplus Log[(r0 - rplus) / 
       (2 M)] - rminus Log[(r0 - rminus) / (2 M)]);
