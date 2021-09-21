@@ -98,7 +98,7 @@ getGridParams[n_, a_, r0_, rminapp_, rmaxapp_, d_] :=
      rminus, rtorstar, r0star, rStarSourceNum, rStarFactorMinus, rStarFactorPlus,
      \[Theta]SourceMin, \[Theta]SourceMax, jSourceStart, jSourceEnd, iSourceStart, iSourceEnd
     },
-    \[Theta]sourceRatio = 3;(* adjust theta source width *)
+    \[Theta]sourceRatio = 3;(* adjust theta source width / odd number*)
     \[Theta]sourceNum = 2 n + 1;
     \[CapitalDelta]\[Theta] = \[Pi] / (\[Theta]sourceRatio \[Theta]sourceNum);
     \[CapitalDelta]\[Theta]\[CapitalDelta]rstarRatio = 0.18; (* adjust ratio of \[CapitalDelta]\[Theta] and \[CapitalDelta]rstar *)
@@ -546,6 +546,7 @@ ssf[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] :=
     d\[Phi]\[Phi] = 1 / r0 function\[Psi][r0star, \[Pi] / 2] * (I m);
     Return[{d\[CapitalPsi]r, d\[Phi]r1, d\[Phi]\[Theta], d\[Phi]\[Phi]}]
   ]
+  (*9/21 meeting*)
 
 
 EndPackage[]
