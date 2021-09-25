@@ -92,6 +92,9 @@ fxym[r,\[Theta]]=Coefficient[box[r,\[Theta]],Subscript[\[Psi], ijm]]//Simplify;r
 *)
 
 
+(*In order for obtained \[CapitalDelta]\[Theta]/\[CapitalDelta]r to be the same as \[CapitalDelta]\[Theta]\[CapitalDelta]rstarRatio, most ideal d = 3.6 and  \[CapitalDelta]\[Theta]\[CapitalDelta]rstarRatio = \[Pi]/6*)
+(*That's the closest to what they have on paper. Would be userful when comparing self force calculation*)
+
 getGridParams[n_, a_, r0_, rminapp_, rmaxapp_, d_] :=
   Module[{iMax, jMax, \[CapitalDelta]\[Theta], \[CapitalDelta]rStar, rStarMin, rStarMax, rStarSourceMin,
      rStarSourceMax, \[Theta]sourceRatio, \[Theta]sourceNum, \[CapitalDelta]\[Theta]\[CapitalDelta]rstarRatio, l, M, rplus,
