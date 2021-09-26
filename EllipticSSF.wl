@@ -94,7 +94,6 @@ fxym[r,\[Theta]]=Coefficient[box[r,\[Theta]],Subscript[\[Psi], ijm]]//Simplify;r
 
 (*In order for obtained \[CapitalDelta]\[Theta]/\[CapitalDelta]r to be the same as \[CapitalDelta]\[Theta]\[CapitalDelta]rstarRatio, most ideal d = 3.6 and  \[CapitalDelta]\[Theta]\[CapitalDelta]rstarRatio = \[Pi]/6*)
 (*That's the closest to what they have on paper. Would be userful when comparing self force calculation*)
-
 getGridParams[n_, a_, r0_, rminapp_, rmaxapp_, d_] :=
   Module[{iMax, jMax, \[CapitalDelta]\[Theta], \[CapitalDelta]rStar, rStarMin, rStarMax, rStarSourceMin,
      rStarSourceMax, \[Theta]sourceRatio, \[Theta]sourceNum, \[CapitalDelta]\[Theta]\[CapitalDelta]rstarRatio, l, M, rplus,
@@ -104,7 +103,7 @@ getGridParams[n_, a_, r0_, rminapp_, rmaxapp_, d_] :=
     \[Theta]sourceRatio = 3;(* adjust theta source width / odd number*)
     \[Theta]sourceNum = 2 n + 1;
     \[CapitalDelta]\[Theta] = \[Pi] / (\[Theta]sourceRatio \[Theta]sourceNum);
-    \[CapitalDelta]\[Theta]\[CapitalDelta]rstarRatio = 0.18; (* adjust ratio of \[CapitalDelta]\[Theta] and \[CapitalDelta]rstar *)
+    \[CapitalDelta]\[Theta]\[CapitalDelta]rstarRatio = \[Pi]/6; (* adjust ratio of \[CapitalDelta]\[Theta] and \[CapitalDelta]rstar *)
     l = Floor[\[CapitalDelta]\[Theta]\[CapitalDelta]rstarRatio d \[Theta]sourceRatio / (2 \[Pi])];
     rStarSourceNum = (2 l + 1) (2 n + 1);
     \[CapitalDelta]rStar = d / rStarSourceNum;
@@ -175,7 +174,7 @@ SourceCombined[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] := (* re-implemented for
     r0star = rtorstar[r0];
     {imax, jmax, \[CapitalDelta]rstar, \[CapitalDelta]\[Theta], rsourcestart, rsourceend, \[Theta]start, \[Theta]end, 
       rsmin, rsmax} = getGridParams[n, a, r0, rminapp, rmaxapp, d];
-    listr = Table[Re[rstartor[rstar]], {rstar, rsmin, rsmax, \[CapitalDelta]rstar}]
+    listr = Table[Re[rstartor[rstar]], {rstar, rsmin, rsmax, \[CapitalDelta]rstar}]//Quiet
       ;
     rsSourceMin = rsmin + (rsourcestart - 1) \[CapitalDelta]rstar;
     rsSourceMax = rsmin + (rsourceend - 1) \[CapitalDelta]rstar;
@@ -233,6 +232,8 @@ SourceCombined[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] := (* re-implemented for
 
 (* original version: SourceCombined[n_,m_] := ... *)
 
+(* original version: SourceCombined[n_,m_] := ... *)
+
 
 CouplingMatrix[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] :=
   Module[{rplus, rminus, rtorstar, r0star, imax, jmax, listr1, MxBC, 
@@ -272,7 +273,7 @@ CouplingMatrix[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] :=
            -> "Newton", AccuracyGoal -> 13, PrecisionGoal -> 13]
       ];
     listr1 = Table[Re[rstartor[rsmin + i * \[CapitalDelta]rstar]], {i, 1, imax - 1}
-      ];
+      ]//Quiet;
     listTheta = Table[j * \[CapitalDelta]\[Theta], {j, 1, jmax - 1}];
     xBC1 = 3.0 - 2 I \[CapitalDelta]rstar \[Omega];
     xBC2 = -4.0;
@@ -470,21 +471,17 @@ CouplingMatrixOld[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] := (* re-implemented 
   {imax, rstarmax, rstarmin, r0star, jmax, rplus, rminus, rtorstar, listr,
    rstartor, listrstar, list\[Theta], function\[CapitalPsi], d\[CapitalPsi]r, \[CurlyPhi], \[CapitalDelta], \[Psi]inr\[Theta]1try1,
    \[CapitalDelta]rstar, \[CapitalDelta]\[Theta], rmatrixfactorminus, rmatrixfactorplus, rsmin, rsmax,
-  l, M, v, \[CapitalOmega], \[Psi]values, rsSourceMin, rsSourceMax, guess},
+  l, M, v, \[CapitalOmega], \[Psi]values, rsSourceMin, rsSourceMax, guess, rsourcestart, rsourceend, \[Theta]start, \[Theta]end},
     M = 1;
     v = 1 / Sqrt[r0];
     \[CapitalOmega] = v^3 / (1 + a v^3);
-    \[CapitalDelta]\[Theta] = \[Pi] / (5 (2 n + 1));
-    l = 3 n + 1;
-    d = (6 / 5) 3 M;
-    \[CapitalDelta]rstar = d / (2 l + 1);
+    {imax, jmax, \[CapitalDelta]rstar, \[CapitalDelta]\[Theta], rsourcestart, rsourceend, \[Theta]start, \[Theta]end, 
+      rsSourceMin, rsSourceMax} = getGridParams[n, a, r0, rminapp, rmaxapp, d];
     rplus = M + Sqrt[M^2 - a^2];
     rminus = M - Sqrt[M^2 - a^2];
     rtorstar[r_] := r + (2 M) / (rplus - rminus) (rplus Log[(r - rplus
       ) / (2 M)] - rminus Log[(r - rminus) / (2 M)]);
     r0star = rtorstar[r0];
-    rsSourceMin = r0star - \[CapitalDelta]rstar / 2 - l * \[CapitalDelta]rstar;
-    rsSourceMax = r0star + \[CapitalDelta]rstar / 2 + l * \[CapitalDelta]rstar;
     rmatrixfactorminus = Floor[(rsSourceMin - rminapp) / d] + 1;
     rmatrixfactorplus = Floor[(rmaxapp - rsSourceMax) / d] + 1;
     rsmin = rsSourceMin - (rmatrixfactorminus - 1) * d;
@@ -509,8 +506,8 @@ CouplingMatrixOld[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] := (* re-implemented 
       ];
     imax = Floor[(rsmax - rsmin) / \[CapitalDelta]rstar + 1];
     jmax = Floor[\[Pi] / \[CapitalDelta]\[Theta] + 1];
-    listr = Table[Re[rstartor[rstar]], {rstar, rsmin, rsmax, \[CapitalDelta]rstar}] ;
-    listrstar = Table[rtorstar[listr[[i]]], {i, 1, Length[listr]}];
+    listr = Table[Re[rstartor[rstar]], {rstar, rsmin, rsmax, \[CapitalDelta]rstar}]//Quiet ;
+    listrstar = Table[rtorstar[listr[[i]]], {i, 1, Length[listr]}]//Quiet;
     list\[Theta] = Table[(j - 1) \[CapitalDelta]\[Theta], {j, 1, jmax}];
     \[CurlyPhi][r_] := a / (rplus - rminus) Log[(r - rplus) / (r - rminus)];
     \[CapitalDelta][r_] := r^2 - 2 M r + a^2;
@@ -525,14 +522,12 @@ CouplingMatrixOld[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] := (* re-implemented 
 
 ssf[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] :=
   Module[{\[Psi]valuesatr\[Theta], function\[Psi], r0star, M, \[CapitalDelta]\[Theta], l, \[CapitalDelta]rstar, d\[CapitalPsi]r, rplus,
-     rminus, d\[Phi]r1, d\[Phi]\[Theta], d\[Phi]\[Phi]},
+     rminus, d\[Phi]r1, d\[Phi]\[Theta], d\[Phi]\[Phi],imax,jmax,rsourcestart,rsourceend,\[Theta]start,\[Theta]end,rsSourceMin,rsSourceMax},
     M = 1;
     rplus = M + Sqrt[M^2 - a^2];
     rminus = M - Sqrt[M^2 - a^2];
-    \[CapitalDelta]\[Theta] = \[Pi] / (5 (2 n + 1));
-    l = 3 n + 1;
-    d = (6 / 5) 3 M;
-    \[CapitalDelta]rstar = d / (2 l + 1);
+    {imax, jmax, \[CapitalDelta]rstar, \[CapitalDelta]\[Theta], rsourcestart, rsourceend, \[Theta]start, \[Theta]end, 
+      rsSourceMin, rsSourceMax} = getGridParams[n, a, r0, rminapp, rmaxapp, d];
     \[Psi]valuesatr\[Theta] = \[Psi]atr\[Theta][n, m, a, r0, rminapp, rmaxapp, d];
     function\[Psi] = Interpolation[\[Psi]valuesatr\[Theta][[1]]];
     r0star = r0 + (2 M) / (rplus - rminus) (rplus Log[(r0 - rplus) / 
@@ -541,7 +536,7 @@ ssf[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] :=
       + \[CapitalDelta]rstar, \[Pi] / 2] - 8 function\[Psi][r0star - \[CapitalDelta]rstar, \[Pi] / 2] + function\[Psi][r0star
        - 2 \[CapitalDelta]rstar, \[Pi] / 2]) / (12 \[CapitalDelta]rstar);
     d\[Phi]r1 = (1 / r0 function\[Psi][r0star, \[Pi] / 2] I m a / ((r0 - rminus) (r0
-       - rplus)) + 1 / r0 * (r0^2 + a^2) / Delta[r0] d\[CapitalPsi]r - function\[Psi][r0star,
+       - rplus)) + 1 / r0 * (r0^2 + a^2) / Delta[a,r0] d\[CapitalPsi]r - function\[Psi][r0star,
        \[Pi] / 2] * 1 / r0^2);
     d\[Phi]\[Theta] = (-function\[Psi][r0star, \[Pi] / 2 + 2 \[CapitalDelta]\[Theta]] + 8 function\[Psi][r0star, \[Pi] /
        2 + \[CapitalDelta]\[Theta]] - 8 function\[Psi][r0star, \[Pi] / 2 - \[CapitalDelta]\[Theta]] + function\[Psi][r0star, \[Pi] / 2 
