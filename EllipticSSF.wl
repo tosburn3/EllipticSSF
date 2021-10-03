@@ -1,8 +1,7 @@
 (* ::Package:: *)
 
 (*Calculating Scalar Self Force Via Elliptic PDEs *)
-(*Author: Nami Nishimura 
-This is a  Mathematica Notebook to calculate the scalar self force via Elliptic PDEs. *)
+(*This is a  Mathematica Notebook to calculate the scalar self force via Elliptic PDEs. *)
 
 
 (*You can change those values to try different mode m, spin parameter a, mass M, and resolutions. *)
