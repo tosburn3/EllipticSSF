@@ -6,15 +6,15 @@
 
 (*You can change those values to try different mode m, spin parameter a, mass M, and resolutions. *)
 
-m=2; (* mode m *)
-n=23; (* resolution *)
-rminapp=-20;(*approximate value for the r^* minimum *)
-rmaxapp=250;(*approximate value for the r^* maximum  *)
+m=; (* mode m *)
+n=; (* resolution *)
+rminapp=;(*approximate value for the r^* minimum *)
+rmaxapp=;(*approximate value for the r^* maximum  *)
+a=; (* spin parameter *)
+r0=;(* location of the worldline *)
 q=1; (* sclar charge *)
 d=3.6; (*width of the worldtube *)
-a=0.0; (* spin parameter *)
 M=1; (* mass of the central black hole *)
-r0=10.0;(* location of the worldline *)
 v=1/Sqrt[r0];(* particle's angular velocity *)
 \[CapitalOmega]=v^3/(1+a v^3);(* particle's angular frequency *)
 
@@ -146,13 +146,7 @@ Sourcelist]
 SM=SourceCombinedNew[n, m, a, r0, rminapp, rmaxapp, d;]
 
 
-(*Calculating  Coupling Matrix *)
-
-(*Here, I'm calculating the Coupling Matrix 
-Boundary condition at Subsuperscript[r, max, *] has the error of (1/Subsuperscript[r, max, *])^4  e^(i\[Omega] Subsuperscript[r, max, *]) *)
-
-CouplingMatrixNew[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] :=Module[{rplus,rminus,rtorstar,r0star,rstarmin1,rstarmax1,rsmin1,rsmax1,\[Theta]smin,\[Theta]smax,imax,jmax,listr1,listrsource1,MxBC,rstartor,listr,listrsource,guess,\[Omega],rsmin,rsmax,rmin,rmax,\[CapitalDelta]\[Theta],\[Theta]sourcegrid,l,\[CapitalDelta]rstar,rsourcegrid,rmatrixfactorminus,rmatrixfactorplus,listTheta, diag, rightDiag, leftDiag,
-     rightSkipDiag, leftSkipDiag,xBC1,xBC2,xBC3,yBC1,yBC2,yBC3,xBC1min,xBC1max,xBC2min,xBC2max,xBC3min,xBC3max,xBC4min,xBC4max,xBC5min,xBC5max,listr2},\[Omega]=m*\[CapitalOmega];\[CapitalDelta]\[Theta]=\[Pi]/(5(2n+1));\[Theta]sourcegrid=2n+1;l=3n+1;\[CapitalDelta]rstar=d/(2l+1);
+GetParam[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] :=Module[{rplus,rminus,rtorstar,r0star,rstarmin1,rstarmax1,rsmin1,rsmax1,\[Theta]smin,\[Theta]smax,imax,jmax,listr1,listrsource1,MxBC,rstartor,listr,listrsource,guess,\[Omega],rsmin,rsmax,rmin,rmax,\[CapitalDelta]\[Theta],\[Theta]sourcegrid,l,\[CapitalDelta]rstar,rsourcegrid,rmatrixfactorminus,rmatrixfactorplus,listTheta,list\[Theta],listrstar},\[Omega]=m*\[CapitalOmega];\[CapitalDelta]\[Theta]=\[Pi]/(5(2n+1));\[Theta]sourcegrid=2n+1;l=3n+1;\[CapitalDelta]rstar=d/(2l+1);
 rsourcegrid=2l+1;
 rplus=M+Sqrt[M^2-a^2];rminus=M-Sqrt[M^2-a^2];rtorstar[r_]=r+(2M )/(rplus - rminus) (rplus Log[(r-rplus)/(2M)]-rminus Log[(r-rminus)/(2M)]);
 r0star=rtorstar[r0];
@@ -166,12 +160,22 @@ rmax=(rmatrixfactorplus-1)*d+rsmax;
 imax=Round[(rmax-rmin)/\[CapitalDelta]rstar];jmax=Floor[\[Pi]/\[CapitalDelta]\[Theta]];
 guess[rstar_]:=If[rstar<= -2,rplus+2*(1-a^2)^(1/rplus-1/2) Exp[(a^2-rplus+(rplus-1)*rstar)/rplus],If[-2<rstar<= 1000,rplus+2(ProductLog[Exp[1/2 (rstar-rplus)]]),rstar+rplus]];
 rstartor[rstar_]:=If[rstar<-50,guess[rstar],r/.FindRoot[rtorstar[r]-rstar==0,{r,guess[rstar]},Method->"Newton"]];
-listr1=Table[Re[rstartor[rstar]],{rstar,rmin,rmax,\[CapitalDelta]rstar}][[2;;-2]]//Quiet;
+
+listr=Table[Re[rstartor[rstar]],{rstar,rmin,rmax,\[CapitalDelta]rstar}]//Quiet;
+listrstar=Table[rtorstar[listr[[i]]],{i,1,Length[listr]}];
+listr1=listr[[2;;-2]]//Quiet;
+listrsource=Table[Re[rstartor[rstar]],{rstar,rsmin,rsmax,\[CapitalDelta]rstar}]//Quiet;list\[Theta]=Table[(j-1)\[CapitalDelta]\[Theta],{j,1,jmax+1}];
+listTheta=list\[Theta][[2;;-2]];{\[Omega],\[CapitalDelta]\[Theta],\[CapitalDelta]rstar,imax,jmax,listr1,listrsource,listTheta,list\[Theta],listrstar,r0star}]
 
 
-listrsource=Table[Re[rstartor[rstar]],{rstar,rsmin,rsmax,\[CapitalDelta]rstar}]//Quiet;
- listTheta = Table[j * \[CapitalDelta]\[Theta], {j, 1, jmax - 1}];
-   
+CouplingMatrixNew[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] :=Module[{\[Omega],\[CapitalDelta]rstar,\[CapitalDelta]\[Theta],listTheta,imax,jmax,listr1,diag,rightDiag,leftDiag,rightSkipDiag,leftSkipDiag,xBC1min,xBC2min,xBC3min,xBC1max,xBC2max,xBC3max,xBC4max,xBC5max,yBC1,yBC2,yBC3,MxBC},
+\[Omega]=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[1]];
+\[CapitalDelta]rstar=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[3]];
+\[CapitalDelta]\[Theta]=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[2]];
+listTheta=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[8]];
+imax=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[4]];
+jmax=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[5]];
+listr1=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[6]];
 diag = Flatten[ArrayPad[Transpose[Table[(a^2 m^2 listr1^2 (a^2 + 
       listr1 (-2 M + listr1)) \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 \[CapitalOmega]^2 + (2 listr1^2 (a^2 + listr1
        (-2 M + listr1)) \[CapitalDelta]rstar^2 + 2 (listr1^2 (a^2 + listr1^2)^2 - (a^2 - 
@@ -226,65 +230,23 @@ MxBC]
       
 
 
-(*Linear Solve *)
-
-(*Here, I'm solving the linear system, Subscript[M, coupling] * Subscript[M, \[CapitalPsi]^m] = Subscript[M, source^m]*)
-
-\[Psi]FDANew[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_]:=Module[{final\[Psi]1,jmax,\[CapitalDelta]\[Theta]},\[CapitalDelta]\[Theta]=\[Pi]/(5(2n+1));jmax=Floor[\[Pi]/\[CapitalDelta]\[Theta]+1];
-
-final\[Psi]1:=Partition[LinearSolve[CouplingMatrixNew[n,m,a,r0,rminapp,rmaxapp,d],SM,Method->"Pardiso"],jmax];
-final\[Psi]1];
-\[Psi]New=\[Psi]FDANew[n,m,a,r0,rminapp,rmaxapp,d]
-
-
-\[Psi]atr\[Theta]New[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_]:=Module[{imax,rstarmax,rstarmin,r0star,jmax,rplus,rminus,rtorstar,listr,rstartor,listrstar,list\[Theta],guess,function\[CapitalPsi],d\[CapitalPsi]r,\[CurlyPhi],\[CapitalDelta],\[Psi]inr\[Theta]1try1,\[CapitalDelta]rstar,\[CapitalDelta]\[Theta],rmatrixfactorminus,rmatrixfactorplus,rmin,rsmin,rsmax,rmax,l},\[CapitalDelta]\[Theta]=\[Pi]/(5(2n+1));l=3n+1;\[CapitalDelta]rstar=d/(2l+1);
-rplus=M+Sqrt[M^2-a^2];rminus=M-Sqrt[M^2-a^2];rtorstar[r_]=r+(2M )/(rplus - rminus) (rplus Log[(r-rplus)/(2M)]-rminus Log[(r-rminus)/(2M)]);
-r0star=rtorstar[r0];rsmin=r0star-\[CapitalDelta]rstar/2-l*\[CapitalDelta]rstar;rsmax=r0star+\[CapitalDelta]rstar/2+l*\[CapitalDelta]rstar;
-rmatrixfactorminus=Floor[(rsmin-rminapp)/d]+1;
-rmatrixfactorplus=Floor[(rmaxapp-rsmax)/d]+1;
-rmin=rsmin-(rmatrixfactorminus-1)*d;
-rmax=(rmatrixfactorplus-1)*d+rsmax;
-guess[rstar_]:=If[rstar<= -2,rplus+2*(1-a^2)^(1/rplus-1/2) Exp[(a^2-rplus+(rplus-1)*rstar)/rplus],If[-2<rstar<= 1000,rplus+2(ProductLog[Exp[1/2 (rstar-rplus)]]),rstar+rplus]];
-rstartor[rstar_]:=If[rstar<-50,guess[rstar],r/.FindRoot[rtorstar[r]-rstar==0,{r,guess[rstar]},Method->"Newton"]];
-imax=Round[(rmax-rmin)/\[CapitalDelta]rstar+1];jmax=Floor[\[Pi]/\[CapitalDelta]\[Theta]+1];listr=Table[Re[rstartor[rstar]],{rstar,rmin,rmax,\[CapitalDelta]rstar}]//Quiet;
-listrstar=Table[rtorstar[listr[[i]]],{i,1,Length[listr]}];
-list\[Theta]=Table[(j-1)\[CapitalDelta]\[Theta],{j,1,jmax}];
-\[CurlyPhi][r_]=a/(rplus-rminus) Log[(r-rplus)/(r-rminus)]; 
-\[CapitalDelta][r_]=r^2-2 M r+a^2;
-{\[Psi]inr\[Theta]1try1=Flatten[Table[{listrstar[[i]],list\[Theta][[j]],\[Psi]New[[i,j]]},{i,1,imax},{j,1,Length[list\[Theta]]}],1],imax,jmax,\[CapitalDelta]rstar,\[CapitalDelta]\[Theta]}]
-
-
-(*Calculating Scalar Self Force*)
-
-SSF[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_]:=Module[{rplus,rminus,\[CurlyPhi],\[Phi],\[CapitalDelta],\[Psi]valuesatr\[Theta]New,rtorstar,r0star,imax,jmax,\[CapitalDelta]rstar1,\[CapitalDelta]\[Theta]1,function\[Psi],d\[CapitalPsi]r,d\[Phi]r1,d\[Phi]\[Theta],d\[Phi]\[Phi]},rplus=M+Sqrt[M^2-a^2];rminus=M-Sqrt[M^2-a^2];
-\[CurlyPhi][r_]:=\[Phi]+a/(rplus-rminus) Log[(r-rplus)/(r-rminus)]; 
-\[Phi]=0; t=0;
+SSF[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_]:=Module[{rplus,rminus,\[CurlyPhi],\[Phi],\[CapitalDelta],\[Psi]valuesatr\[Theta]New,rtorstar,r0star,imax,jmax,\[CapitalDelta]rstar,\[CapitalDelta]\[Theta],function\[Psi],d\[CapitalPsi]r,d\[Phi]r1,d\[Phi]\[Theta],d\[Phi]\[Phi]},
+rplus=M+Sqrt[M^2-a^2];rminus=M-Sqrt[M^2-a^2];
+\[CapitalDelta]\[Theta]=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[2]];
+\[CapitalDelta]rstar=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[3]];
+r0star=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[11]];
 \[CapitalDelta][r_]:=r^2-2 M r+a^2;
-\[Psi]valuesatr\[Theta]New=\[Psi]atr\[Theta]New[n,m,a,r0,rminapp,rmaxapp,d];
-rtorstar[r_]=r+(2M )/(rplus - rminus) (rplus Log[(r-rplus)/(2M)]-rminus Log[(r-rminus)/(2M)]);
-r0star=rtorstar[r0]; 
-imax=\[Psi]valuesatr\[Theta]New[[2]];
-jmax=\[Psi]valuesatr\[Theta]New[[3]];(*jmax is always even number*)
-\[CapitalDelta]rstar1=\[Psi]valuesatr\[Theta]New[[4]];
-\[CapitalDelta]\[Theta]1=\[Psi]valuesatr\[Theta]New[[5]];
+\[CurlyPhi][r_]:=\[Phi]+a/(rplus-rminus) Log[(r-rplus)/(r-rminus)]; 
+\[Phi]=0; 
+
 function\[Psi]=Interpolation[\[Psi]atr\[Theta]New[n,m,a,r0,rminapp,rmaxapp,d][[1]]];
-d\[CapitalPsi]r=(-function\[Psi][r0star+2\[CapitalDelta]rstar1,\[Pi]/2]+8function\[Psi][r0star+\[CapitalDelta]rstar1,\[Pi]/2]-8function\[Psi][r0star-\[CapitalDelta]rstar1,\[Pi]/2]+function\[Psi][r0star-2\[CapitalDelta]rstar1,\[Pi]/2])/(12\[CapitalDelta]rstar1);
+d\[CapitalPsi]r=(-function\[Psi][r0star+2\[CapitalDelta]rstar,\[Pi]/2]+8function\[Psi][r0star+\[CapitalDelta]rstar,\[Pi]/2]-8function\[Psi][r0star-\[CapitalDelta]rstar,\[Pi]/2]+function\[Psi][r0star-2\[CapitalDelta]rstar,\[Pi]/2])/(12\[CapitalDelta]rstar);
 d\[Phi]r1=(1/r0 function\[Psi][r0star,\[Pi]/2] I m a/((r0-rminus)(r0-rplus))+1/r0 *(r0^2+a^2)/\[CapitalDelta][r0] d\[CapitalPsi]r - function\[Psi][r0star,\[Pi]/2]  *1/r0^2)*Exp[I m \[CurlyPhi][r0]];
-d\[Phi]\[Theta]=(-function\[Psi][r0star,\[Pi]/2+2\[CapitalDelta]\[Theta]1]+8function\[Psi][r0star,\[Pi]/2+\[CapitalDelta]\[Theta]1]-8function\[Psi][r0star,\[Pi]/2-\[CapitalDelta]\[Theta]1]+function\[Psi][r0star,\[Pi]/2-2\[CapitalDelta]\[Theta]1])/(12\[CapitalDelta]\[Theta]1);
+d\[Phi]\[Theta]=(-function\[Psi][r0star,\[Pi]/2+2\[CapitalDelta]\[Theta]]+8function\[Psi][r0star,\[Pi]/2+\[CapitalDelta]\[Theta]]-8function\[Psi][r0star,\[Pi]/2-\[CapitalDelta]\[Theta]]+function\[Psi][r0star,\[Pi]/2-2\[CapitalDelta]\[Theta]])/(12\[CapitalDelta]\[Theta]);
 d\[Phi]\[Phi]=1/r0 function\[Psi][r0star,\[Pi]/2]*(I m)*Exp[I m \[CurlyPhi][r0]];
 Return[{d\[Phi]r1,d\[Phi]\[Phi]}]]
 
 
 
-(*You have to be careful when a \[NotEqual]0 
-d\[Phi]r1= (1/r0 function\[Psi][r0star,\[Pi]/2] I m a/((r0-rminus)(r0-rplus))+1/r0 *(r0^2+a^2)/\[CapitalDelta][r0] d\[CapitalPsi]r - function\[Psi][r0star,\[Pi]/2]  *1/r0^2)  * e^(i m \[CurlyPhi])
-\[CurlyPhi] = \[Phi] + \[CapitalDelta]\[Phi][r] 
-\[CapitalDelta]\[Phi][r] = a/(r^+-r^-) ln|(r-r^+)/(r-r^-)| 
-and therefore, when a \[NotEqual] 0, \[CurlyPhi] \[NotEqual] 0, and therefore e^im\[CurlyPhi] \[NotEqual] 1 *)
-
-
-(*Scalar Self Force Results *)
-
 ssf=SSF[n,m,a,r0,rminapp,rmaxapp,d] ; 
-Fr = 2*ssf[[1]]
-F\[Phi] = 2*ssf[[2]]
+SSFvalue=If[m==0,ssf,2*ssf]
