@@ -1,252 +1,878 @@
 (* ::Package:: *)
 
-(*Calculating Scalar Self Force Via Elliptic PDEs *)
-(*This is a  Mathematica Notebook to calculate the scalar self force via Elliptic PDEs. *)
+(* These first two definitions are prototypes for functions that will be overwritten 
+when "InitializeSeff[]" is called from the linked C code for the effective source *)
+
+PsiPm[m_, r_, \[Theta]_] := None; 
+
+Seffm[m_, r_, \[Theta]_] := None; 
 
 
-(*You can change those values to try different mode m, spin parameter a, mass M, and resolutions. *)
+(* These global variables are prototypes that must be overwritten with actual 
+values in the notebook where "EllipticSSF.wl" is imported via "Get[]" *)
 
-m=; (* mode m *)
-n=; (* resolution *)
-rminapp=;(*approximate value for the r^* minimum *)
-rmaxapp=;(*approximate value for the r^* maximum  *)
-a=; (* spin parameter *)
-r0=;(* location of the worldline *)
-q=1; (* sclar charge *)
-d=3.6; (*width of the worldtube *)
-M=1; (* mass of the central black hole *)
-v=1/Sqrt[r0];(* particle's angular velocity *)
-\[CapitalOmega]=v^3/(1+a v^3);(* particle's angular frequency *)
+r0 = None; 
+
+a = None; 
+
+v = None; (* v = 1/Sqrt[r0] *)
+
+\[CapitalOmega] = None;  (* \[CapitalOmega] = v^3/(1+a v^3) *)
 
 
-
-(*Importing Effective Source  *)
-
-SetDirectory[NotebookDirectory[]]
-link=Install["a.out"];
-InitializeSeff[r0,a];
-
-(* Here, I'm calling the C-code "kerr-circular.c" created by Barry Wardell, which is available on his website https://github.com/barrywardell/EffectiveSource/blob/master/kerr-circular.c *)
-(* "a.out" is this C-code, adjusted to work for Mathematica Notebook *) 
- 
+Delta[a_, rSubrPlus_] := Module[{r, rPlus, rMinus},
+  rPlus = 1 + Sqrt[1 - a^2]; rMinus = 1 - Sqrt[1 - a^2]; r = rSubrPlus
+     + rPlus; rSubrPlus (r - rMinus)
+]
 
 
-(*Effective Source Calculation *)
+Sigma[a_, rSubrPlus_, \[Theta]_] := Module[{r, rPlus, rMinus},
+  rPlus = 1 + Sqrt[1 - a^2]; rMinus = 1 - Sqrt[1 - a^2]; r = rSubrPlus
+     + rPlus; Sqrt[(r^2 + a^2) ^ 2 - a^2 Delta[a, rSubrPlus] Sin[\[Theta]] ^ 2]
+]
 
-Delta[a_, rSubRPlus_] :=
+
+\[CapitalDelta]\[Phi][a_, rSubrPlus_] := Module[{rPlus, rMinus, r},
+  rPlus = 1 + Sqrt[1 - a^2]; rMinus = 1 - Sqrt[1 - a^2]; r = rSubrPlus
+     + rPlus; a / (rPlus - rMinus) Log[rSubrPlus / (r - rMinus)]
+]
+
+
+d\[CapitalDelta]\[Phi]dr[a_, rSubrPlus_] := Module[{rPlus, rMinus, r},
+  rPlus = 1 + Sqrt[1 - a^2]; rMinus = 1 - Sqrt[1 - a^2]; r = rSubrPlus
+     + rPlus; a / (rSubrPlus (r - rMinus))
+]
+
+
+drStardr[a_, rSubrPlus_] := Module[{rPlus, rMinus, r},
+  rPlus = 1 + Sqrt[1 - a^2]; r = rSubrPlus + rPlus; (r^2 + a^2) / Delta[
+    a, rSubrPlus]
+]
+
+
+getrStarFromrSubrPlus[a_, rSubrPlus_] :=
   Module[{r, rPlus, rMinus},
+    rPlus = 1 + Sqrt[1 - a^2]; rMinus = 1 - Sqrt[1 - a^2]; r = rSubrPlus
+       + rPlus; r + 2 / (rPlus - rMinus) (rPlus Log[rSubrPlus / 2] - rMinus
+       Log[(r - rMinus) / 2])
+  ]
+
+
+getrSubrPlusFromrStar[a_, rStar_] :=
+  Module[{rSubrPlus, guess, rPlus},
     rPlus = 1 + Sqrt[1 - a^2];
-    rMinus = 1 - Sqrt[1 - a^2];
-    r = rSubRPlus + rPlus;
-    rSubRPlus (r - rMinus)
-  ];
-Sigma[a_, rSubRPlus_, \[Theta]_] :=
-  Module[{r, rPlus, rMinus},
-    rPlus = 1 + Sqrt[1 - a^2];
-    rMinus = 1 - Sqrt[1 - a^2];
-    r = rSubRPlus + rPlus;
-    Sqrt[(r^2 + a^2)^2 - a^2 Delta[a, rSubRPlus] Sin[\[Theta]]^2]
-  ];
-\[CapitalDelta]\[Phi][a_, rSubRPlus_] :=
-  Module[{rPlus, rMinus, r},
-    rPlus = 1 + Sqrt[1 - a^2];
-    rMinus = 1 - Sqrt[1 - a^2];
-    r = rSubRPlus + rPlus;
-    a / (rPlus - rMinus) Log[rSubRPlus / (r - rMinus)]
-  ]; 
-
-scaled\[CapitalPhi]Pm[m_,r_,\[Theta]_]:=Module[{rPlus},rPlus=1+Sqrt[1-a^2];PsiPm[m,r,\[Theta]]Exp[-I m \[CapitalDelta]\[Phi][a,r-rPlus]]/(2 \[Pi] r)];
-scaledSeffm[m_,r_,\[Theta]_]:=Module[{rPlus},rPlus=1+Sqrt[1-a^2];Seffm[m,r,\[Theta]]Exp[-I m \[CapitalDelta]\[Phi][a,r-rPlus]]/(2 \[Pi])];
-
-
-
-(*Solving m-mode scalar wave operator *)
-
-(*Here, I'm solving a m-mode scalar wave operator by using finite difference approximation. 
-The coefficient of Subscript[\[Psi], i,j], Subscript[\[Psi], i+1,j], Subscript[\[Psi], i-1, j], Subscript[\[Psi], i,j+1]  and Subscript[\[Psi], i,j-1] are calculated (which are controlled by the parameter "A" inside this function) 
-Function below was re-implemented for package friendliness *)
-
-getfxyCoeff[r_, \[Theta]_, A_, \[CapitalDelta]rstar_, \[CapitalDelta]\[Theta]_, m_] :=Module[ {M},
-    M = 1;
-    Return[
-      If[A == 1,
-        (a^2 m^2 r^2 (a^2 + r (-2 M + r)) \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 \[CapitalOmega]^2 + (2 r^2 
-          (a^2 + r (-2 M + r)) \[CapitalDelta]rstar^2 + 2 (r^2 (a^2 + r^2)^2 - (a^2 - I a m r
-           - M r) (a^2 + r (-2 M + r)) \[CapitalDelta]rstar^2) \[CapitalDelta]\[Theta]^2 + 4 a m^2 M r^3 \[CapitalDelta]rstar^2 
-          \[CapitalDelta]\[Theta]^2 \[CapitalOmega] - m^2 r^2 (a^2 + r^2)^2 \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 \[CapitalOmega]^2) Csc[\[Theta]]^2 + m^2 r^2 
-          (a^2 + r (-2 M + r)) \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 Csc[\[Theta]]^4) / (r^2 \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 (-a
-          ^2 (a^2 + r (-2 M + r)) + (a^2 + r^2)^2 Csc[\[Theta]]^2))
+    guess =
+      If[rStar < -2,
+        2 (1 - a^2) ^ (1 / rPlus - 1 / 2) Exp[(a^2 - rPlus + (rPlus -
+           1) * rStar) / rPlus]
         ,
-        If[A == 2,
-          (-r (a^2 + r^2)^2 + a (a^3 - I a^2 m r - I m r^3 + a r (-2 
-            M + r)) \[CapitalDelta]rstar) / (r \[CapitalDelta]rstar^2 ((a^2 + r^2)^2 - a^2 (a^2 + r (-2 M + r
-            )) Sin[\[Theta]]^2))
+        If[rStar < 1000,
+          2 * ProductLog[Exp[(rStar - rPlus) / 2]]
           ,
-          If[A == 3,
-            -(r (a^2 + r^2)^2 + a (a^3 - I a^2 m r - I m r^3 + a r (-
-              2 M + r)) \[CapitalDelta]rstar) / (r \[CapitalDelta]rstar^2 ((a^2 + r^2)^2 - a^2 (a^2 + r (-2 M +
-               r)) Sin[\[Theta]]^2))
-            ,
-            If[A == 4,
-              (a^2 + r (-2 M + r)) (2 + \[CapitalDelta]\[Theta] Cot[\[Theta]]) / (2 \[CapitalDelta]\[Theta]^2 (-(a^2 +
-                 r^2)^2 + a^2 (a^2 + r (-2 M + r)) Sin[\[Theta]]^2))
+          rStar
+        ]
+      ];
+    Re[
+      rSubrPlus /.
+        Quiet[
+          Check[
+            If[rStar < 10,
+              FindRoot[getrStarFromrSubrPlus[a, rSubrPlus] - rStar, {
+                rSubrPlus, guess}, AccuracyGoal -> 13, PrecisionGoal -> 13]
               ,
-              -(a^2 + r (-2 M + r)) (-2 + \[CapitalDelta]\[Theta] Cot[\[Theta]]) / (2 \[CapitalDelta]\[Theta]^2 (-(a^2
-                 + r^2)^2 + a^2 (a^2 + r (-2 M + r)) Sin[\[Theta]]^2))
+              FindRoot[getrStarFromrSubrPlus[a, rSubrPlus] / rStar - 
+                1, {rSubrPlus, guess}, AccuracyGoal -> 13, PrecisionGoal -> 13]
             ]
+            ,
+            NSolve[getrStarFromrSubrPlus[a, rSubrPlus] / rStar - 1 ==
+               0, rSubrPlus, Reals][[1]]
           ]
         ]
-      ]
     ]
   ]
-  
-  
-  
-
-(*This is the original function *)
-
-(*getfxyCoeff[r_,\[Theta]_,A_,\[CapitalDelta]rstar_,\[CapitalDelta]\[Theta]_,m_]:=Module[{\[CapitalDelta],\[CapitalSigma]sq,box,\[Delta]t2,\[Delta]t,\[Delta]rstar,\[Delta]rstar2,\[Delta]\[Theta],\[Delta]\[Theta]2,none,fxy,fxyp,fxym,fxpy,fxmy,\[Omega],returnvalue},\[Omega]=m*\[CapitalOmega];\[CapitalDelta][r,\[Theta]]= r^2-2 M r +a^2;\[CapitalSigma]sq[r,\[Theta]]= (r^2+a^2)^2-a^2 ( r^2-2 M r +a^2) Sin[\[Theta]]^2;box[r,\[Theta]] = (\[Delta]t2+((4 \[ImaginaryI] a m M r)/\[CapitalSigma]sq[r,\[Theta]])\[Delta]t-((r^2+a^2)^2/\[CapitalSigma]sq[r,\[Theta]])\[Delta]rstar2-((2 \[ImaginaryI] a m r (r^2+a^2)-2a^2\[CapitalDelta])/(r \[CapitalSigma]sq[r,\[Theta]]))\[Delta]rstar-(\[CapitalDelta][r,\[Theta]]/\[CapitalSigma]sq[r,\[Theta]])\[Delta]\[Theta]2-(\[CapitalDelta][r,\[Theta]]/\[CapitalSigma]sq[r,\[Theta]]Cot[\[Theta]])\[Delta]\[Theta]-(\[CapitalDelta][r,\[Theta]]/\[CapitalSigma]sq[r,\[Theta]](-m^2/Sin[\[Theta]]^2-(2M)/r(1-a^2/(M r))-(2 \[ImaginaryI] a m )/r))none) ;(*getting rid of e^(-\[ImaginaryI] \[Omega] t)*)
-\[Delta]t2=-\[Omega]^2Subscript[\[Psi], ij]; \[Delta]t=-\[ImaginaryI] \[Omega] Subscript[\[Psi], ij]; \[Delta]rstar2=(Subscript[\[Psi], ipj]-2Subscript[\[Psi], ij]+Subscript[\[Psi], imj])/\[CapitalDelta]rstar^2; \[Delta]rstar=(Subscript[\[Psi], ipj]-Subscript[\[Psi], imj])/(2 \[CapitalDelta]rstar); \[Delta]\[Theta]2=(Subscript[\[Psi], ijp]-2Subscript[\[Psi], ij]+Subscript[\[Psi], ijm])/\[CapitalDelta]\[Theta]^2; \[Delta]\[Theta]=(Subscript[\[Psi], ijp]-Subscript[\[Psi], ijm])/(2 \[CapitalDelta]\[Theta]);none = Subscript[\[Psi], ij]; 
-fxy[r,\[Theta]]=Coefficient[box[r,\[Theta]],Subscript[\[Psi], ij]]//Simplify;fxpy[r,\[Theta]]=Coefficient[box[r,\[Theta]],Subscript[\[Psi], ipj]]//Simplify;
-fxmy[r,\[Theta]]=Coefficient[box[r,\[Theta]],Subscript[\[Psi], imj]]//Simplify;fxyp[r,\[Theta]]=Coefficient[box[r,\[Theta]],Subscript[\[Psi], ijp]]//Simplify;
-fxym[r,\[Theta]]=Coefficient[box[r,\[Theta]],Subscript[\[Psi], ijm]]//Simplify;returnvalue =If[A\[Equal]1,fxy[r,\[Theta]],If[A\[Equal]2,fxpy[r,\[Theta]],If[A\[Equal]3,fxmy[r,\[Theta]],If[A\[Equal]4,fxyp[r,\[Theta]],fxym[r,\[Theta]]]]]];returnvalue]*)
 
 
-(*Calculating Source Matrix *)
-
-(*Here, I'm calculating the Source Matrix on r-\[Theta] plane and then making it to one array. 
-This source matrix includes the effective source and also it takes into consideration the "jump" between full filed mode \[CapitalPsi]^m and residual field mode Subsuperscript[\[CapitalPsi], R, m] across the worldtube. *)
-
-SourceCombinedNew[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_]:=Module[{rplus,rminus,rtorstar,r0star,rsmin,rsmax,guess,rstartor,listr,listrsource,\[Theta]smin,\[Theta]smax,imax,jmax,rsourcestart,rsourceend,listSeff1,SourceMatrix1,i,j,r,LeftBC,RightBC,TopBC,BottomBC,SecondTopBC,SecondBottomBC,SecondLeftBC,SourceBC1,SecondRightBC,Sourcelist,\[CapitalDelta]\[Theta],\[Theta]sourcegrid,l,\[CapitalDelta]rstar,rmatrixfactorminus,rmatrixfactorplus,rmin,rmax,\[Theta]start,\[Theta]end},\[CapitalDelta]\[Theta]=\[Pi]/(5(2n+1));\[Theta]sourcegrid=2n+1;l=3n+1;
-\[CapitalDelta]rstar=d/(2l+1);
-rplus=M+Sqrt[M^2-a^2];rminus=M-Sqrt[M^2-a^2];rtorstar[r_]=r+(2M )/(rplus - rminus) (rplus Log[(r-rplus)/(2M)]-rminus Log[(r-rminus)/(2M)]);
-r0star=rtorstar[r0];
-rsmin=r0star-\[CapitalDelta]rstar/2-l*\[CapitalDelta]rstar;rsmax=r0star+\[CapitalDelta]rstar/2+l*\[CapitalDelta]rstar;
-\[Theta]smin=\[Pi]/2-\[CapitalDelta]\[Theta]/2-n*\[CapitalDelta]\[Theta];\[Theta]smax=\[Pi]/2+\[CapitalDelta]\[Theta]/2+n*\[CapitalDelta]\[Theta];
-rmatrixfactorminus=Floor[(rsmin-rminapp)/d]+1;
-rmatrixfactorplus=Floor[(rmaxapp-rsmax)/d]+1;
-rmin=rsmin-(rmatrixfactorminus-1)*d;
-rmax=(rmatrixfactorplus-1)*d+rsmax;
-\[Theta]start=\[Theta]smin/\[CapitalDelta]\[Theta];\[Theta]end=\[Theta]smax/\[CapitalDelta]\[Theta];
-
-imax=Round[(rmax-rmin)/\[CapitalDelta]rstar+1];jmax=Floor[\[Pi]/\[CapitalDelta]\[Theta]+1];
-guess[rstar_]:=If[rstar<= -2,rplus+2*(1-a^2)^(1/rplus-1/2) Exp[(a^2-rplus+(rplus-1)*rstar)/rplus],If[-2<rstar<= 1000,rplus+2(ProductLog[Exp[1/2 (rstar-rplus)]]),rstar+rplus]];
-rstartor[rstar_]:=If[rstar<-50,guess[rstar],r/.FindRoot[rtorstar[r]-rstar==0,{r,guess[rstar]},Method->"Newton"]];
-listr=Table[Re[rstartor[rstar]],{rstar,rmin,rmax,\[CapitalDelta]rstar}]//Quiet;listrsource=Table[Re[rstartor[rstar]],{rstar,rsmin,rsmax,\[CapitalDelta]rstar}]//Quiet;
-rsourcestart=Floor[(rsmin-rmin)/\[CapitalDelta]rstar+1];rsourceend=rsourcestart+Length[listrsource]-1;
-listSeff1=Table[scaledSeffm[m,listrsource[[i]],N[j]],{i,1,Length[listrsource]},{j,\[Theta]smin,\[Theta]smax,\[CapitalDelta]\[Theta]}];
-
-SourceMatrix1=SparseArray[Flatten[Table[{i+rsourcestart-1,j+\[Theta]start}->listSeff1[[i,j]],{i,1,Length[listrsource]},{j,1,\[Theta]end-\[Theta]start+1}]],{imax,jmax}];LeftBC:=SparseArray[Flatten[Table[{i2+rsourcestart-1,\[Theta]start}-> -getfxyNew[listrsource[[i2]],N[\[Theta]smin-\[CapitalDelta]\[Theta]],4,\[CapitalDelta]rstar,\[CapitalDelta]\[Theta],m] listrsource[[i2]] scaled\[CapitalPhi]Pm[m,listrsource[[i2]],N[\[Theta]smin]],{i2,1,Length[listrsource]}]],{imax,jmax}];SecondLeftBC:=SparseArray[Flatten[Table[{i2+rsourcestart-1,\[Theta]start+1}-> getfxyNew[listrsource[[i2]],N[\[Theta]smin],5,\[CapitalDelta]rstar,\[CapitalDelta]\[Theta],m] listrsource[[i2]] scaled\[CapitalPhi]Pm[m,listrsource[[i2]],N[\[Theta]smin-\[CapitalDelta]\[Theta]]],{i2,1,Length[listrsource]}]],{imax,jmax}];RightBC:=SparseArray[Flatten[Table[{i1+rsourcestart-1,\[Theta]end+2}-> -getfxyNew [listrsource[[i1]],N[\[Theta]smax+\[CapitalDelta]\[Theta]],5,\[CapitalDelta]rstar,\[CapitalDelta]\[Theta],m]listrsource[[i1]] scaled\[CapitalPhi]Pm[m,listrsource[[i1]],N[\[Theta]smax]],{i1,1,Length[listrsource]}]],{imax,jmax}];
-SecondRightBC:=SparseArray[Flatten[Table[{i1+rsourcestart-1,\[Theta]end+1}-> getfxyNew[listrsource[[i1]],N[\[Theta]smax],4,\[CapitalDelta]rstar,\[CapitalDelta]\[Theta],m] listrsource[[i1]] scaled\[CapitalPhi]Pm[m,listrsource[[i1]],N[\[Theta]smax+\[CapitalDelta]\[Theta]]],{i1,1,Length[listrsource]}]],{imax,jmax}];TopBC:=SparseArray[Flatten[Table[{rsourcestart-1,\[Theta]start+j}-> -getfxyNew [listr[[rsourcestart-1]],N[\[Theta]smin+\[CapitalDelta]\[Theta]*(j-1)],2,\[CapitalDelta]rstar,\[CapitalDelta]\[Theta],m]listr[[rsourcestart]] scaled\[CapitalPhi]Pm[m,listr[[rsourcestart]],N[\[Theta]smin+\[CapitalDelta]\[Theta]*(j-1)]],{j,1,\[Theta]end-\[Theta]start+1}]],{imax,jmax}];
-SecondTopBC:=SparseArray[Flatten[Table[{rsourcestart,\[Theta]start+j}-> getfxyNew[listr[[rsourcestart]],N[\[Theta]smin+\[CapitalDelta]\[Theta]*(j-1)],3,\[CapitalDelta]rstar,\[CapitalDelta]\[Theta],m] listr[[rsourcestart-1]] scaled\[CapitalPhi]Pm[m,listr[[rsourcestart-1]],N[\[Theta]smin+\[CapitalDelta]\[Theta]*(j-1)]],{j,1,\[Theta]end-\[Theta]start+1}]],{imax,jmax}];BottomBC:=SparseArray[Flatten[Table[{rsourceend+1,\[Theta]start+j}-> -getfxyNew[listr[[rsourceend+1]],N[\[Theta]smin+\[CapitalDelta]\[Theta]*(j-1)],3,\[CapitalDelta]rstar,\[CapitalDelta]\[Theta],m] listr[[rsourceend]] scaled\[CapitalPhi]Pm[m,listr[[rsourceend]],N[\[Theta]smin+\[CapitalDelta]\[Theta]*(j-1)]],{j,1,\[Theta]end-\[Theta]start+1}]],{imax,jmax}];SecondBottomBC:=SparseArray[Flatten[Table[{rsourceend,\[Theta]start+j}-> getfxyNew[listr[[rsourceend]],N[\[Theta]smin+\[CapitalDelta]\[Theta]*(j-1)],2,\[CapitalDelta]rstar,\[CapitalDelta]\[Theta],m] listr[[rsourceend+1]] scaled\[CapitalPhi]Pm[m,listr[[rsourceend+1]],N[\[Theta]smin+\[CapitalDelta]\[Theta]*(j-1)]],{j,1,\[Theta]end-\[Theta]start+1}]],{imax,jmax}];
-SourceBC1=LeftBC+SourceMatrix1+SecondLeftBC+RightBC+SecondRightBC+TopBC+SecondTopBC+BottomBC+SecondBottomBC;
-Sourcelist=Flatten[ArrayReshape[SourceBC1,{1,imax*jmax}]];
-Sourcelist]
-
-SM=SourceCombinedNew[n, m, a, r0, rminapp, rmaxapp, d;]
+getrStarParams[a_, r0_, wtDiam_, rStarHguess_, rStarIguess_] :=
+  Module[{rPlus, rStar0, rStarL, rStarR, rStarH, rStarI},
+    rPlus = 1 + Sqrt[1 - a^2];
+    rStar0 = getrStarFromrSubrPlus[a, r0 - rPlus];
+    rStarL = rStar0 - 0.5 wtDiam;
+    rStarR = rStar0 + 0.5 wtDiam;
+    rStarI = rStarR + wtDiam Ceiling[(rStarIguess - rStarR) / wtDiam]
+      ;
+    rStarH = rStarL - wtDiam Ceiling[(rStarL - rStarHguess) / wtDiam]
+      ;
+    {rStarH, rStarL, rStar0, rStarR, rStarI}
+  ]
 
 
-GetParam[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] :=Module[{rplus,rminus,rtorstar,r0star,rstarmin1,rstarmax1,rsmin1,rsmax1,\[Theta]smin,\[Theta]smax,imax,jmax,listr1,listrsource1,MxBC,rstartor,listr,listrsource,guess,\[Omega],rsmin,rsmax,rmin,rmax,\[CapitalDelta]\[Theta],\[Theta]sourcegrid,l,\[CapitalDelta]rstar,rsourcegrid,rmatrixfactorminus,rmatrixfactorplus,listTheta,list\[Theta],listrstar},\[Omega]=m*\[CapitalOmega];\[CapitalDelta]\[Theta]=\[Pi]/(5(2n+1));\[Theta]sourcegrid=2n+1;l=3n+1;\[CapitalDelta]rstar=d/(2l+1);
-rsourcegrid=2l+1;
-rplus=M+Sqrt[M^2-a^2];rminus=M-Sqrt[M^2-a^2];rtorstar[r_]=r+(2M )/(rplus - rminus) (rplus Log[(r-rplus)/(2M)]-rminus Log[(r-rminus)/(2M)]);
-r0star=rtorstar[r0];
-rsmin=r0star-\[CapitalDelta]rstar/2-l*\[CapitalDelta]rstar;rsmax=r0star+\[CapitalDelta]rstar/2+l*\[CapitalDelta]rstar;
-\[Theta]smin=\[Pi]/2-\[CapitalDelta]\[Theta]/2-n*\[CapitalDelta]\[Theta];\[Theta]smax=\[Pi]/2+\[CapitalDelta]\[Theta]/2+n*\[CapitalDelta]\[Theta];
-rmatrixfactorminus=Floor[(rsmin-rminapp)/d]+1;
-rmatrixfactorplus=Floor[(rmaxapp-rsmax)/d]+1;
-rmin=rsmin-(rmatrixfactorminus-1)*d;
-rmax=(rmatrixfactorplus-1)*d+rsmax;
-
-imax=Round[(rmax-rmin)/\[CapitalDelta]rstar];jmax=Floor[\[Pi]/\[CapitalDelta]\[Theta]];
-guess[rstar_]:=If[rstar<= -2,rplus+2*(1-a^2)^(1/rplus-1/2) Exp[(a^2-rplus+(rplus-1)*rstar)/rplus],If[-2<rstar<= 1000,rplus+2(ProductLog[Exp[1/2 (rstar-rplus)]]),rstar+rplus]];
-rstartor[rstar_]:=If[rstar<-50,guess[rstar],r/.FindRoot[rtorstar[r]-rstar==0,{r,guess[rstar]},Method->"Newton"]];
-
-listr=Table[Re[rstartor[rstar]],{rstar,rmin,rmax,\[CapitalDelta]rstar}]//Quiet;
-listrstar=Table[rtorstar[listr[[i]]],{i,1,Length[listr]}];
-listr1=listr[[2;;-2]]//Quiet;
-listrsource=Table[Re[rstartor[rstar]],{rstar,rsmin,rsmax,\[CapitalDelta]rstar}]//Quiet;list\[Theta]=Table[(j-1)\[CapitalDelta]\[Theta],{j,1,jmax+1}];
-listTheta=list\[Theta][[2;;-2]];{\[Omega],\[CapitalDelta]\[Theta],\[CapitalDelta]rstar,imax,jmax,listr1,listrsource,listTheta,list\[Theta],listrstar,r0star}]
+getrStarListOld[rStarMax_, rStarMin_, \[CapitalDelta]rStar_] := Module[
+  {},
+ Table[rStar, {rStar, rStarMin, rStarMax, \[CapitalDelta]rStar}]
+]
 
 
-CouplingMatrixNew[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_] :=Module[{\[Omega],\[CapitalDelta]rstar,\[CapitalDelta]\[Theta],listTheta,imax,jmax,listr1,diag,rightDiag,leftDiag,rightSkipDiag,leftSkipDiag,xBC1min,xBC2min,xBC3min,xBC1max,xBC2max,xBC3max,xBC4max,xBC5max,yBC1,yBC2,yBC3,MxBC},
-\[Omega]=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[1]];
-\[CapitalDelta]rstar=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[3]];
-\[CapitalDelta]\[Theta]=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[2]];
-listTheta=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[8]];
-imax=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[4]];
-jmax=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[5]];
-listr1=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[6]];
-diag = Flatten[ArrayPad[Transpose[Table[(a^2 m^2 listr1^2 (a^2 + 
-      listr1 (-2 M + listr1)) \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 \[CapitalOmega]^2 + (2 listr1^2 (a^2 + listr1
-       (-2 M + listr1)) \[CapitalDelta]rstar^2 + 2 (listr1^2 (a^2 + listr1^2)^2 - (a^2 - 
-      I a m listr1 - M listr1) (a^2 + listr1 (-2 M + listr1)) \[CapitalDelta]rstar^2) \[CapitalDelta]\[Theta]^
-      2 + 4 a m^2 M listr1^3 \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 \[CapitalOmega] - m^2 listr1^2 (a^2 + listr1^2
-      )^2 \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 \[CapitalOmega]^2) Csc[theta]^2 + m^2 listr1^2 (a^2 + listr1 (-2 
-      M + listr1)) \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 Csc[theta]^4) / (listr1^2 \[CapitalDelta]rstar^2 \[CapitalDelta]\[Theta]^2 (-
-      a^2 (a^2 + listr1 (-2 M + listr1)) + (a^2 + listr1^2)^2 Csc[theta]^2)
-      ), {theta, listTheta}]], 1]];
-    rightDiag = Flatten[ArrayPad[Transpose[Table[(a^2 + listr1 (-2 M 
-      + listr1)) (2 + \[CapitalDelta]\[Theta] Cot[theta]) / (2 \[CapitalDelta]\[Theta]^2 (-(a^2 + listr1^2)^2 + a^2 (
-      a^2 + listr1 (-2 M + listr1)) Sin[theta]^2)), {theta, listTheta}]], 1
-      ]];
-    leftDiag = Flatten[ArrayPad[Transpose[Table[-(a^2 + listr1 (-2 M 
-      + listr1)) (-2 + \[CapitalDelta]\[Theta] Cot[theta]) / (2 \[CapitalDelta]\[Theta]^2 (-(a^2 + listr1^2)^2 + a^2 
-      (a^2 + listr1 (-2 M + listr1)) Sin[theta]^2)), {theta, listTheta}]], 
-      1]];
-    rightSkipDiag = Flatten[ArrayPad[Transpose[Table[(-listr1 (a^2 + 
-      listr1^2)^2 + a (a^3 - I a^2 m listr1 - I m listr1^3 + a listr1 (-2 M
-       + listr1)) \[CapitalDelta]rstar) / (listr1 \[CapitalDelta]rstar^2 ((a^2 + listr1^2)^2 - a^2 (a^2
-       + listr1 (-2 M + listr1)) Sin[theta]^2)), {theta, listTheta}]], {{1,
-       0}, {1, 1}}]];
-    leftSkipDiag = Flatten[ArrayPad[Transpose[Table[-(listr1 (a^2 + listr1
-      ^2)^2 + a (a^3 - I a^2 m listr1 - I m listr1^3 + a listr1 (-2 M + listr1
-      )) \[CapitalDelta]rstar) / (listr1 \[CapitalDelta]rstar^2 ((a^2 + listr1^2)^2 - a^2 (a^2 + listr1
-       (-2 M + listr1)) Sin[theta]^2)), {theta, listTheta}]], {{0, 1}, {1, 
-      1}}]];
-xBC1min=3-2I \[CapitalDelta]rstar \[Omega];xBC2min=-4;xBC3min=1;
+getrStarList[\[CapitalDelta]rStar_, rStarH_, rStarL_, rStar0_, rStarR_, rStarI_] :=
+  Module[{wtDiam, wtNum, new\[CapitalDelta]rStar, totalNum},
+    wtDiam = rStarR - rStarL;
+    wtNum = 2 Round[(1 + wtDiam / \[CapitalDelta]rStar) / 2];
+    new\[CapitalDelta]rStar = wtDiam / (wtNum - 1);
+    totalNum = Round[(rStarI - rStarH) / new\[CapitalDelta]rStar] + 1;
+    Return[Table[rStarH + (i - 1) new\[CapitalDelta]rStar, {i, 1, totalNum}]]
+  ]
 
-xBC1max=5-12 I \[CapitalDelta]rstar \[Omega]-9 \[CapitalDelta]rstar^2 \[Omega]^2+2 I \[CapitalDelta]rstar^3 \[Omega]^3;
-xBC2max=-18 + 30 I \[CapitalDelta]rstar \[Omega] + 12 \[CapitalDelta]rstar^2 \[Omega]^2;
-xBC3max=24-24 I \[CapitalDelta]rstar \[Omega] - 3 \[CapitalDelta]rstar^2 \[Omega]^2;
-xBC4max=-14+6 I \[CapitalDelta]rstar \[Omega];
-xBC5max=3;
-yBC1=If[m==0,3,1];yBC2=If[m==0,-4,0];yBC3=If[m==0,1,0];
-MxBC=SparseArray[{Band[{1, 1}, {(jmax + 1), (jmax + 1)}] -> xBC1min,
-Band[{1,  jmax + 2}, {(jmax + 1), 2 (1+jmax)}] -> xBC2min,
-Band[{1,3+2 jmax}, {(jmax + 1), 3 (1+jmax)}] -> xBC3min,
-Band[{1+imax+imax jmax,  (imax + 1) (jmax + 1)-jmax}, {(imax + 1) (jmax + 1), (imax + 1) (jmax + 1)}] -> xBC1max,
-Band[{1+imax+imax jmax, (imax + 1) (jmax + 1)-jmax-1-jmax}, {(imax + 1) (jmax + 1), (imax + 1) (jmax + 1)-jmax-1}] -> xBC2max,
-Band[{1+imax+imax jmax,(imax + 1) (jmax + 1)-jmax-1-jmax-1-jmax}, {(imax + 1) (jmax + 1),(imax + 1) (jmax + 1)-jmax-1-jmax-1}] -> xBC3max,
-Band[{1+imax+imax jmax,(imax + 1) (jmax + 1)-jmax-1-jmax-1-jmax-1-jmax},{(imax + 1) (jmax + 1),(imax + 1) (jmax + 1)-jmax-1-jmax-1-jmax-1}] ->xBC4max,
-Band[{1+imax+imax jmax,(imax + 1) (jmax + 1)-jmax-1-jmax-1-jmax-1-jmax-1-jmax},{(imax + 1) (jmax + 1),(imax + 1) (jmax + 1)-jmax-1-jmax-1-jmax-1-jmax-1}] ->xBC5max,
-Band[{2+jmax,2+jmax},{imax+(-1+imax) jmax,imax+(-1+imax) jmax},1+jmax]->yBC1,Band[{2(1+jmax),2(1+jmax)},{(1+imax-1)(1+jmax),(1+imax-1)(1+jmax)},1+jmax]->yBC1,Band[{2+jmax,3+jmax},{imax+(-1+imax) jmax,imax+(-1+imax) jmax+1},1+jmax]->yBC2,Band[{2(1+jmax),2(1+jmax)-1},{(1+imax-1)(1+jmax),(1+imax-1)(1+jmax)-1},1+jmax]->yBC2,Band[{2+jmax,4+jmax},{imax+(-1+imax) jmax,imax+(-1+imax) jmax+2},1+jmax]->yBC3,Band[{2(1+jmax),2(1+jmax)-2},{(1+imax-1)(1+jmax),(1+imax-1)(1+jmax)-2},1+jmax]->yBC3}, {(imax + 1) (jmax + 1), (imax + 1) (jmax + 1)}, 0] + DiagonalMatrix[SparseArray[
-      {i_} :> diag[[i]], {Length[diag]}, 0], 0] + DiagonalMatrix[SparseArray[
-      {i_} :> rightDiag[[i]], {Length[rightDiag] - 1}, 0], 1]+ DiagonalMatrix[
-      SparseArray[{i_} :> leftDiag[[i + 1]], {Length[leftDiag] - 1}, 0], -1
-      ] + DiagonalMatrix[SparseArray[{i_} :> rightSkipDiag[[i]], {Length[rightSkipDiag
-      ]}, 0], jmax + 1] + DiagonalMatrix[SparseArray[{i_} :> leftSkipDiag[[
-      i]], {Length[leftSkipDiag]}, 0], -jmax - 1];
-MxBC]
+
+getrSubrPlusList[a_, rStarList_] := Table[getrSubrPlusFromrStar[a, rStar
+  ], {rStar, rStarList}]
+
+
+getIsourceBounds[rStarList_, rStarH_, rStarL_, rStar0_, rStarR_, rStarI_
+  ] := Module[{\[CapitalDelta]rStar},
+  \[CapitalDelta]rStar = (rStarList[[-1]] - rStarList[[1]]) / (Length[rStarList] - 
+    1); Return[{1 + Round[(rStarL - rStarH) / \[CapitalDelta]rStar], 1 + Round[(rStarR 
+    - rStarH) / \[CapitalDelta]rStar]}]
+]
+
+
+getThetaListOld[\[CapitalDelta]\[Theta]_] := Module[{},
+Table[\[Theta], {\[Theta], 0, \[Pi], \[CapitalDelta]\[Theta]}]]
+
+
+getThetaList[\[CapitalDelta]\[Theta]_, thetaSourceSize_] := Module[{numSourceInPi, newThetaSourceSize,
+   sourceNum, nTheta, new\[CapitalDelta]\[Theta], totalNum},
+  numSourceInPi = If[OddQ[Round[\[Pi] / thetaSourceSize]] == True,
+    Round[\[Pi] / thetaSourceSize]
+    ,
+    2 (Round[\[Pi] / (2 thetaSourceSize)] + 1 / 2)
+  ];
+  newThetaSourceSize = N[\[Pi] / numSourceInPi];
+  sourceNum = 2 Round[(1 + newThetaSourceSize / \[CapitalDelta]\[Theta]) / 2];
+  new\[CapitalDelta]\[Theta] = newThetaSourceSize / (sourceNum - 1);
+  totalNum = Round[\[Pi] / new\[CapitalDelta]\[Theta]] + 1;
+  Return[Table[(j - 1) new\[CapitalDelta]\[Theta], {j, 1, totalNum}]]
+]
+
+
+getJsourceBounds[\[CapitalDelta]\[Theta]_, thetaSourceSize_] := Module[{numSourceInPi, newThetaSourceSize,
+   sourceNum, nTheta, new\[CapitalDelta]\[Theta], totalNum},
+  numSourceInPi = If[OddQ[Round[\[Pi] / thetaSourceSize]] == True,
+    Round[\[Pi] / thetaSourceSize]
+    ,
+    2 (Round[\[Pi] / (2 thetaSourceSize)] + 1 / 2)
+  ];
+  newThetaSourceSize = N[\[Pi] / numSourceInPi];
+  sourceNum = 2 Round[(1 + newThetaSourceSize / \[CapitalDelta]\[Theta]) / 2];
+  new\[CapitalDelta]\[Theta] = newThetaSourceSize / (sourceNum - 1);
+  totalNum = Round[\[Pi] / new\[CapitalDelta]\[Theta]] + 1;
+  Return[{1 + Round[(\[Pi] / 2 - newThetaSourceSize / 2) / new\[CapitalDelta]\[Theta]], 1 + Round[
+    (\[Pi] / 2 + newThetaSourceSize / 2) / new\[CapitalDelta]\[Theta]]}]
+]
+
+
+rowToI[row_, jMax_] := Floor[(row - 1) / jMax] + 1
+
+
+rowToJ[row_, i_, jMax_] := row - (i - 1) jMax
+
+
+ijToCol[i_, j_, jMax_] := j + (i - 1) jMax
+
+
+fij[m_, a_, rSubrPlus_, \[Theta]_, \[CapitalDelta]rStar_, \[CapitalDelta]\[Theta]_, \[Omega]_] :=
+  Module[{r, rPlus, \[CapitalSigma], \[CapitalDelta]},
+    rPlus = 1 + Sqrt[1 - a^2];
+    r = rSubrPlus + rPlus;
+    \[CapitalSigma] = Sigma[a, rSubrPlus, \[Theta]];
+    \[CapitalDelta] = Delta[a, rSubrPlus];
+    -\[Omega]^2 + 4 a m \[Omega] r / \[CapitalSigma]^2 - (r^2 + a^2) ^ 2 / \[CapitalSigma]^2 (-2 / \[CapitalDelta]rStar^2) - 
+      \[CapitalDelta] / \[CapitalSigma]^2 ((-2 / \[CapitalDelta]\[Theta]^2) - m^2 / Sin[\[Theta]] ^ 2 - 2 / r (1 - a^2 / r) - 2 I a
+       m / r)
+  ]
+
+
+fiMj[m_, a_, rSubrPlus_, \[Theta]_, \[CapitalDelta]rStar_, \[CapitalDelta]\[Theta]_, \[Omega]_] :=
+  Module[{r, rPlus, \[CapitalSigma], \[CapitalDelta]},
+    rPlus = 1 + Sqrt[1 - a^2];
+    r = rSubrPlus + rPlus;
+    \[CapitalSigma] = Sigma[a, rSubrPlus, \[Theta]];
+    \[CapitalDelta] = Delta[a, rSubrPlus];
+    -(r^2 + a^2) ^ 2 / \[CapitalSigma]^2 (1 / \[CapitalDelta]rStar^2) - (2 I a m r (r^2 + a^2) - 
+      2 a^2 \[CapitalDelta]) / (r \[CapitalSigma]^2) (-1 / (2 \[CapitalDelta]rStar))
+  ]
+
+
+fiPj[m_, a_, rSubrPlus_, \[Theta]_, \[CapitalDelta]rStar_, \[CapitalDelta]\[Theta]_, \[Omega]_] :=
+  Module[{r, rPlus, \[CapitalSigma], \[CapitalDelta]},
+    rPlus = 1 + Sqrt[1 - a^2];
+    r = rSubrPlus + rPlus;
+    \[CapitalSigma] = Sigma[a, rSubrPlus, \[Theta]];
+    \[CapitalDelta] = Delta[a, rSubrPlus];
+    -(r^2 + a^2) ^ 2 / \[CapitalSigma]^2 (1 / \[CapitalDelta]rStar^2) - (2 I a m r (r^2 + a^2) - 
+      2 a^2 \[CapitalDelta]) / (r \[CapitalSigma]^2) (1 / (2 \[CapitalDelta]rStar))
+  ]
+
+
+fijM[m_, a_, rSubrPlus_, \[Theta]_, \[CapitalDelta]rStar_, \[CapitalDelta]\[Theta]_, \[Omega]_] :=
+  Module[{r, rPlus, \[CapitalSigma], \[CapitalDelta]},
+    rPlus = 1 + Sqrt[1 - a^2];
+    r = rSubrPlus + rPlus;
+    \[CapitalSigma] = Sigma[a, rSubrPlus, \[Theta]];
+    \[CapitalDelta] = Delta[a, rSubrPlus];
+    -\[CapitalDelta] / \[CapitalSigma]^2 ((1 / \[CapitalDelta]\[Theta]^2) + Cot[\[Theta]] (-1 / (2 \[CapitalDelta]\[Theta])))
+  ]
+
+
+fijP[m_, a_, rSubrPlus_, \[Theta]_, \[CapitalDelta]rStar_, \[CapitalDelta]\[Theta]_, \[Omega]_] :=
+  Module[{r, rPlus, \[CapitalSigma], \[CapitalDelta]},
+    rPlus = 1 + Sqrt[1 - a^2];
+    r = rSubrPlus + rPlus;
+    \[CapitalSigma] = Sigma[a, rSubrPlus, \[Theta]];
+    \[CapitalDelta] = Delta[a, rSubrPlus];
+    -\[CapitalDelta] / \[CapitalSigma]^2 ((1 / \[CapitalDelta]\[Theta]^2) + Cot[\[Theta]] (1 / (2 \[CapitalDelta]\[Theta])))
+  ]
+
+
+couplingMatrixSlow[m_, rStarList_, rSubrPlusList_, thetaList_] :=
+  Module[{iMax, jMax, i, j, mat, row, col, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], 
+    \[Omega]},
+    \[Omega] = m \[CapitalOmega];
+    iMax = Length[rStarList];
+    jMax = Length[thetaList];
+    \[CapitalDelta]rStar = (rStarList[[-1]] - rStarList[[1]]) / (iMax - 1);
+    \[CapitalDelta]\[Theta] = (thetaList[[-1]] - thetaList[[1]]) / (jMax - 1);
+    mat = SparseArray[{}, {iMax jMax, iMax jMax}, 0];
+    Do[
+      \[Theta] = thetaList[[j]];
+      Do[
+        rSubrPlus = rSubrPlusList[[i]];
+        row = ijToCol[i, j, jMax];
+        mat[[row, row]] = fij[m, a, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], \[Omega]];
+        col = ijToCol[i + 1, j, jMax];
+        mat[[row, col]] = fiPj[m, a, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], \[Omega]];
+        col = ijToCol[i - 1, j, jMax];
+        mat[[row, col]] = fiMj[m, a, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], \[Omega]];
+        col = ijToCol[i, j + 1, jMax];
+        mat[[row, col]] = fijP[m, a, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], \[Omega]];
+        col = ijToCol[i, j - 1, jMax];
+        mat[[row, col]] = fijM[m, a, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], \[Omega]];
+        
+        ,
+        {i, 2, iMax - 1}
+      ];
       
+      ,
+      {j, 2, jMax - 1}
+    ];
+    If[m == 0,
+      row = ijToCol[1, 1, jMax];
+      mat[[row, row]] = 1;
+      row = ijToCol[iMax, 1, jMax];
+      mat[[row, row]] = 1;
+      row = ijToCol[1, jMax, jMax];
+      mat[[row, row]] = 1;
+      row = ijToCol[iMax, jMax, jMax];
+      mat[[row, row]] = 1;
+      Do[
+        row = ijToCol[i, 1, jMax];
+        mat[[row, row]] = -3 / (2 \[CapitalDelta]\[Theta]);
+        col = ijToCol[i, 2, jMax];
+        mat[[row, col]] = 2 / \[CapitalDelta]\[Theta];
+        col = ijToCol[i, 3, jMax];
+        mat[[row, col]] = -1 / (2 \[CapitalDelta]\[Theta]);
+        row = ijToCol[i, jMax, jMax];
+        mat[[row, row]] = -3 / (2 \[CapitalDelta]\[Theta]);
+        col = ijToCol[i, jMax - 1, jMax];
+        mat[[row, col]] = 2 / \[CapitalDelta]\[Theta];
+        col = ijToCol[i, jMax - 2, jMax];
+        mat[[row, col]] = -1 / (2 \[CapitalDelta]\[Theta]);
+        
+        ,
+        {i, 2, iMax - 1}
+      ];
+      Do[
+        row = ijToCol[1, j, jMax];
+        mat[[row, row]] = -3 / (2 \[CapitalDelta]rStar);
+        col = ijToCol[2, j, jMax];
+        mat[[row, col]] = 2 / \[CapitalDelta]rStar;
+        col = ijToCol[3, j, jMax];
+        mat[[row, col]] = -1 / (2 \[CapitalDelta]rStar);
+        row = ijToCol[iMax, j, jMax];
+        mat[[row, row]] = 1;
+        
+        ,
+        {j, 2, jMax - 1}
+      ];
+      
+      ,
+      Do[
+        row = ijToCol[i, 1, jMax];
+        mat[[row, row]] = 1;
+        row = ijToCol[i, jMax, jMax];
+        mat[[row, row]] = 1;
+        
+        ,
+        {i, 1, iMax}
+      ];
+      Do[
+        row = ijToCol[1, j, jMax];
+        mat[[row, row]] = I \[Omega] - 3 / (2 \[CapitalDelta]rStar);
+        col = ijToCol[2, j, jMax];
+        mat[[row, col]] = 2 / \[CapitalDelta]rStar;
+        col = ijToCol[3, j, jMax];
+        mat[[row, col]] = -1 / (2 \[CapitalDelta]rStar);
+        row = ijToCol[iMax, j, jMax];
+        mat[[row, row]] = -(I + \[CapitalDelta]rStar \[Omega]) (2 I + \[CapitalDelta]rStar \[Omega]) / \[CapitalDelta]rStar^2
+          ;
+        col = ijToCol[iMax - 1, j, jMax];
+        mat[[row, col]] = (-5 + 4 I \[CapitalDelta]rStar \[Omega]) / \[CapitalDelta]rStar^2;
+        col = ijToCol[iMax - 2, j, jMax];
+        mat[[row, col]] = (4 - I \[CapitalDelta]rStar \[Omega]) / \[CapitalDelta]rStar^2;
+        col = ijToCol[iMax - 3, j, jMax];
+        mat[[row, col]] = -1 / \[CapitalDelta]rStar^2;
+        
+        ,
+        {j, 2, jMax - 1}
+      ];
+      
+    ];
+    mat
+  ]
 
 
-SSF[n_, m_, a_, r0_, rminapp_, rmaxapp_, d_]:=Module[{rplus,rminus,\[CurlyPhi],\[Phi],\[CapitalDelta],\[Psi]valuesatr\[Theta]New,rtorstar,r0star,imax,jmax,\[CapitalDelta]rstar,\[CapitalDelta]\[Theta],function\[Psi],d\[CapitalPsi]r,d\[Phi]r1,d\[Phi]\[Theta],d\[Phi]\[Phi]},
-rplus=M+Sqrt[M^2-a^2];rminus=M-Sqrt[M^2-a^2];
-\[CapitalDelta]\[Theta]=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[2]];
-\[CapitalDelta]rstar=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[3]];
-r0star=GetParam[n,m,a,r0,rminapp,rmaxapp,d][[11]];
-\[CapitalDelta][r_]:=r^2-2 M r+a^2;
-\[CurlyPhi][r_]:=\[Phi]+a/(rplus-rminus) Log[(r-rplus)/(r-rminus)]; 
-\[Phi]=0; 
+couplingMatrix[m_, rStarList_, rSubrPlusList_, thetaList_] := Module[
+  {iMax, jMax, i, j, mat, row, col, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], \[Omega]},
+  \[Omega] = m \[CapitalOmega];
+  iMax = Length[rStarList];
+  jMax = Length[thetaList];
+  \[CapitalDelta]rStar = (rStarList[[-1]] - rStarList[[1]]) / (iMax - 1);
+  \[CapitalDelta]\[Theta] = (thetaList[[-1]] - thetaList[[1]]) / (jMax - 1);
+  SparseArray[
+    Join[
+      If[m == 0,
+        Join[{{1, 1} -> 1, {jMax, jMax} -> 1, Band[{2, 2}, {jMax - 1, jMax
+           - 1}] -> -3 / (2 \[CapitalDelta]rStar), Band[{2, 2 + jMax}, {jMax - 1, 2 jMax - 1}]
+           -> 2 / \[CapitalDelta]rStar, Band[{2, 2 + 2 jMax}, {jMax - 1, 3 jMax - 1}] -> -1 / (
+          2 \[CapitalDelta]rStar), Band[{iMax jMax - 2 - (jMax - 3), iMax jMax - 2 - (jMax - 
+          3)}, {iMax jMax, iMax jMax}] -> 1}, ParallelTable[{ijToCol[i, 1, jMax],
+           ijToCol[i, 1, jMax]} -> -3 / (2 \[CapitalDelta]\[Theta]), {i, 2, iMax - 1}], ParallelTable[
+          {ijToCol[i, 1, jMax], ijToCol[i, 2, jMax]} -> 2 / \[CapitalDelta]\[Theta], {i, 2, iMax - 1}
+          ], ParallelTable[{ijToCol[i, 1, jMax], ijToCol[i, 3, jMax]} -> -1 / (2
+           \[CapitalDelta]\[Theta]), {i, 2, iMax - 1}], ParallelTable[{ijToCol[i, jMax, jMax], ijToCol[
+          i, jMax, jMax]} -> -3 / (2 \[CapitalDelta]\[Theta]), {i, 2, iMax - 1}], ParallelTable[{ijToCol[
+          i, jMax, jMax], ijToCol[i, jMax - 1, jMax]} -> 2 / \[CapitalDelta]\[Theta], {i, 2, iMax - 1
+          }], ParallelTable[{ijToCol[i, jMax, jMax], ijToCol[i, jMax - 2, jMax]
+          } -> -1 / (2 \[CapitalDelta]\[Theta]), {i, 2, iMax - 1}]]
+        ,
+        Join[{Band[{2, 2}, {jMax - 1, jMax - 1}] -> I \[Omega] - 3 / (2 \[CapitalDelta]rStar
+          ), Band[{2, ijToCol[2, 2, jMax]}, {jMax - 1, ijToCol[2, 2, jMax] + jMax
+           - 3}] -> 2 / \[CapitalDelta]rStar, Band[{2, ijToCol[3, 2, jMax]}, {jMax - 1, ijToCol[
+          3, 2, jMax] + jMax - 3}] -> -1 / (2 \[CapitalDelta]rStar), Band[{iMax jMax - 1 - (jMax
+           - 3), iMax jMax - 1 - (jMax - 3)}, {iMax jMax - 1, iMax jMax - 1}] ->
+           -(I + \[CapitalDelta]rStar \[Omega]) (2 I + \[CapitalDelta]rStar \[Omega]) / \[CapitalDelta]rStar^2, Band[{iMax jMax - 1 - (
+          jMax - 3), ijToCol[iMax - 1, 2, jMax]}, {iMax jMax - 1, ijToCol[iMax 
+          - 1, 2, jMax] + jMax - 3}] -> (-5 + 4 I \[CapitalDelta]rStar \[Omega]) / \[CapitalDelta]rStar^2, Band[{iMax
+           jMax - 1 - (jMax - 3), ijToCol[iMax - 2, 2, jMax]}, {iMax jMax - 1, 
+          ijToCol[iMax - 2, 2, jMax] + jMax - 3}] -> (4 - I \[CapitalDelta]rStar \[Omega]) / \[CapitalDelta]rStar^2,
+           Band[{iMax jMax - 1 - (jMax - 3), ijToCol[iMax - 3, 2, jMax]}, {iMax
+           jMax - 1, ijToCol[iMax - 3, 2, jMax] + jMax - 3}] -> -1 / \[CapitalDelta]rStar^2}, 
+          ParallelTable[{ijToCol[i, 1, jMax], ijToCol[i, 1, jMax]} -> 1, {i, 1, 
+          iMax}], ParallelTable[{ijToCol[i, jMax, jMax], ijToCol[i, jMax, jMax]
+          } -> 1, {i, 1, iMax}]]
+      ]
+      ,
+      ParallelTable[Band[{ijToCol[i, 2, jMax], ijToCol[i, 2, jMax]}] 
+        -> fij[m, a, rSubrPlusList[[i]], thetaList[[2 ;; -2]], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], \[Omega]],
+         {i, 2, iMax - 1}]
+      ,
+      ParallelTable[Band[{ijToCol[i, 2, jMax], ijToCol[i + 1, 2, jMax
+        ]}] -> fiPj[m, a, rSubrPlusList[[i]], thetaList[[2 ;; -2]], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta],
+         \[Omega]], {i, 2, iMax - 1}]
+      ,
+      ParallelTable[Band[{ijToCol[i, 2, jMax], ijToCol[i - 1, 2, jMax
+        ]}] -> fiMj[m, a, rSubrPlusList[[i]], thetaList[[2 ;; -2]], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta],
+         \[Omega]], {i, 2, iMax - 1}]
+      ,
+      ParallelTable[Band[{ijToCol[i, 2, jMax], ijToCol[i, 3, jMax]}] 
+        -> fijP[m, a, rSubrPlusList[[i]], thetaList[[2 ;; -2]], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], \[Omega]],
+         {i, 2, iMax - 1}]
+      ,
+      ParallelTable[Band[{ijToCol[i, 2, jMax], ijToCol[i, 1, jMax]}] 
+        -> fijM[m, a, rSubrPlusList[[i]], thetaList[[2 ;; -2]], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], \[Omega]],
+         {i, 2, iMax - 1}]
+    ]
+    ,
+    {iMax jMax, iMax jMax}
+    ,
+    0
+  ]
+]
 
-function\[Psi]=Interpolation[\[Psi]atr\[Theta]New[n,m,a,r0,rminapp,rmaxapp,d][[1]]];
-d\[CapitalPsi]r=(-function\[Psi][r0star+2\[CapitalDelta]rstar,\[Pi]/2]+8function\[Psi][r0star+\[CapitalDelta]rstar,\[Pi]/2]-8function\[Psi][r0star-\[CapitalDelta]rstar,\[Pi]/2]+function\[Psi][r0star-2\[CapitalDelta]rstar,\[Pi]/2])/(12\[CapitalDelta]rstar);
-d\[Phi]r1=(1/r0 function\[Psi][r0star,\[Pi]/2] I m a/((r0-rminus)(r0-rplus))+1/r0 *(r0^2+a^2)/\[CapitalDelta][r0] d\[CapitalPsi]r - function\[Psi][r0star,\[Pi]/2]  *1/r0^2)*Exp[I m \[CurlyPhi][r0]];
-d\[Phi]\[Theta]=(-function\[Psi][r0star,\[Pi]/2+2\[CapitalDelta]\[Theta]]+8function\[Psi][r0star,\[Pi]/2+\[CapitalDelta]\[Theta]]-8function\[Psi][r0star,\[Pi]/2-\[CapitalDelta]\[Theta]]+function\[Psi][r0star,\[Pi]/2-2\[CapitalDelta]\[Theta]])/(12\[CapitalDelta]\[Theta]);
-d\[Phi]\[Phi]=1/r0 function\[Psi][r0star,\[Pi]/2]*(I m)*Exp[I m \[CurlyPhi][r0]];
-Return[{d\[Phi]r1,d\[Phi]\[Phi]}]]
+
+couplingMatrixFast[m_, rStarList_, rSubrPlusList_, thetaList_] := Module[
+  {M, iMax, jMax, i, j, mat, row, col, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], \[Omega], diag,
+   rightDiag, leftDiag, rightSkipDiag, leftSkipDiag},
+  M = 1;
+  \[Omega] = m \[CapitalOmega];
+  iMax = Length[rStarList];
+  jMax = Length[thetaList];
+  \[CapitalDelta]rStar = (rStarList[[-1]] - rStarList[[1]]) / (iMax - 1);
+  \[CapitalDelta]\[Theta] = (thetaList[[-1]] - thetaList[[1]]) / (jMax - 1);
+  diag = Flatten[ArrayPad[Transpose[Table[fij[m, a, rSubrPlusList[[2 
+    ;; -2]], theta, \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], \[Omega]], {theta, thetaList[[2 ;; -2]]}]], 1]];
+    
+  rightDiag = Flatten[ArrayPad[Transpose[Table[fijP[m, a, rSubrPlusList[[
+    2 ;; -2]], theta, \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], \[Omega]], {theta, thetaList[[2 ;; -2]]}]], 1]
+    ];
+  leftDiag = Flatten[ArrayPad[Transpose[Table[fijM[m, a, rSubrPlusList[[
+    2 ;; -2]], theta, \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], \[Omega]], {theta, thetaList[[2 ;; -2]]}]], 1]
+    ];
+  rightSkipDiag = Flatten[ArrayPad[Transpose[Table[fiPj[m, a, rSubrPlusList[[
+    2 ;; -2]], theta, \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], \[Omega]], {theta, thetaList[[2 ;; -2]]}]], {{
+    1, 0}, {1, 1}}]];
+  leftSkipDiag = Flatten[ArrayPad[Transpose[Table[fiMj[m, a, rSubrPlusList[[
+    2 ;; -2]], theta, \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], \[Omega]], {theta, thetaList[[2 ;; -2]]}]], {{
+    0, 1}, {1, 1}}]];
+  SparseArray[
+    If[m == 0,
+      Join[{{1, 1} -> 1, {jMax, jMax} -> 1, Band[{2, 2}, {jMax - 1, jMax
+         - 1}] -> -3 / (2 \[CapitalDelta]rStar), Band[{2, 2 + jMax}, {jMax - 1, 2 jMax - 1}]
+         -> 2 / \[CapitalDelta]rStar, Band[{2, 2 + 2 jMax}, {jMax - 1, 3 jMax - 1}] -> -1 / (
+        2 \[CapitalDelta]rStar), Band[{iMax jMax - 2 - (jMax - 3), iMax jMax - 2 - (jMax - 
+        3)}, {iMax jMax, iMax jMax}] -> 1}, Table[{ijToCol[i, 1, jMax],
+         ijToCol[i, 1, jMax]} -> -3 / (2 \[CapitalDelta]\[Theta]), {i, 2, iMax - 1}], Table[
+        {ijToCol[i, 1, jMax], ijToCol[i, 2, jMax]} -> 2 / \[CapitalDelta]\[Theta], {i, 2, iMax - 1}
+        ], Table[{ijToCol[i, 1, jMax], ijToCol[i, 3, jMax]} -> -1 / (2
+         \[CapitalDelta]\[Theta]), {i, 2, iMax - 1}], Table[{ijToCol[i, jMax, jMax], ijToCol[
+        i, jMax, jMax]} -> -3 / (2 \[CapitalDelta]\[Theta]), {i, 2, iMax - 1}], Table[{ijToCol[
+        i, jMax, jMax], ijToCol[i, jMax - 1, jMax]} -> 2 / \[CapitalDelta]\[Theta], {i, 2, iMax - 1
+        }], Table[{ijToCol[i, jMax, jMax], ijToCol[i, jMax - 2, jMax]
+        } -> -1 / (2 \[CapitalDelta]\[Theta]), {i, 2, iMax - 1}]]
+      ,
+      Join[{Band[{2, 2}, {jMax - 1, jMax - 1}] -> I \[Omega] - 3 / (2 \[CapitalDelta]rStar),
+         Band[{2, ijToCol[2, 2, jMax]}, {jMax - 1, ijToCol[2, 2, jMax] + jMax
+         - 3}] -> 2 / \[CapitalDelta]rStar, Band[{2, ijToCol[3, 2, jMax]}, {jMax - 1, ijToCol[
+        3, 2, jMax] + jMax - 3}] -> -1 / (2 \[CapitalDelta]rStar), Band[{iMax jMax - 1 - (jMax
+         - 3), iMax jMax - 1 - (jMax - 3)}, {iMax jMax - 1, iMax jMax - 1}] ->
+         -(I + \[CapitalDelta]rStar \[Omega]) (2 I + \[CapitalDelta]rStar \[Omega]) / \[CapitalDelta]rStar^2, Band[{iMax jMax - 1 - (
+        jMax - 3), ijToCol[iMax - 1, 2, jMax]}, {iMax jMax - 1, ijToCol[iMax 
+        - 1, 2, jMax] + jMax - 3}] -> (-5 + 4 I \[CapitalDelta]rStar \[Omega]) / \[CapitalDelta]rStar^2, Band[{iMax
+         jMax - 1 - (jMax - 3), ijToCol[iMax - 2, 2, jMax]}, {iMax jMax - 1, 
+        ijToCol[iMax - 2, 2, jMax] + jMax - 3}] -> (4 - I \[CapitalDelta]rStar \[Omega]) / \[CapitalDelta]rStar^2,
+         Band[{iMax jMax - 1 - (jMax - 3), ijToCol[iMax - 3, 2, jMax]}, {iMax
+         jMax - 1, ijToCol[iMax - 3, 2, jMax] + jMax - 3}] -> -1 / \[CapitalDelta]rStar^2}, 
+        Table[{ijToCol[i, 1, jMax], ijToCol[i, 1, jMax]} -> 1, {i, 1, 
+        iMax}], Table[{ijToCol[i, jMax, jMax], ijToCol[i, jMax, jMax]
+        } -> 1, {i, 1, iMax}]]
+    ]
+    ,
+    {iMax jMax, iMax jMax}
+    ,
+    0
+  ] + DiagonalMatrix[SparseArray[{i_} :> diag[[i]], {Length[diag]}, 0
+    ], 0] + DiagonalMatrix[SparseArray[{i_} :> rightDiag[[i]], {Length[rightDiag
+    ] - 1}, 0], 1] + DiagonalMatrix[SparseArray[{i_} :> leftDiag[[i + 1]],
+     {Length[leftDiag] - 1}, 0], -1] + DiagonalMatrix[SparseArray[{i_} :>
+     rightSkipDiag[[i]], {Length[rightSkipDiag]}, 0], jMax] + DiagonalMatrix[
+    SparseArray[{i_} :> leftSkipDiag[[i]], {Length[leftSkipDiag]}, 0], -jMax
+    ]
+]
 
 
+testMatrixSlow[m_, \[CapitalDelta]rStar_, \[CapitalDelta]\[Theta]_, rStarMax_, rStarMin_] := Module[{rStarList,
+   rSubrPlusList, thetaList, mat},
+  rStarList = getrStarListOld[rStarMax, rStarMin, \[CapitalDelta]rStar]; rSubrPlusList
+     = getrSubrPlusList[a, rStarList]; thetaList = getThetaListOld[\[CapitalDelta]\[Theta]]; mat = couplingMatrixSlow[
+    m, rStarList, rSubrPlusList, thetaList]; mat
+]
 
-ssf=SSF[n,m,a,r0,rminapp,rmaxapp,d] ; 
-SSFvalue=If[m==0,ssf,2*ssf]
+
+testMatrix[m_, \[CapitalDelta]rStar_, \[CapitalDelta]\[Theta]_, rStarMax_, rStarMin_] := Module[{rStarList,
+   rSubrPlusList, thetaList, mat},
+  rStarList = getrStarListOld[rStarMax, rStarMin, \[CapitalDelta]rStar]; rSubrPlusList
+     = getrSubrPlusList[a, rStarList]; thetaList = getThetaListOld[\[CapitalDelta]\[Theta]]; mat = couplingMatrix[
+    m, rStarList, rSubrPlusList, thetaList]; mat
+]
+
+
+testMatrixFast[m_, \[CapitalDelta]rStar_, \[CapitalDelta]\[Theta]_, rStarMax_, rStarMin_] := Module[{rStarList,
+   rSubrPlusList, thetaList, mat},
+  rStarList = getrStarListOld[rStarMax, rStarMin, \[CapitalDelta]rStar]; rSubrPlusList
+     = getrSubrPlusList[a, rStarList];
+       thetaList = getThetaListOld[\[CapitalDelta]\[Theta]]; mat = couplingMatrixFast[
+    m, rStarList, rSubrPlusList, thetaList]; mat
+]
+
+
+sourceVector[m_, rStarList_, rSubrPlusList_, thetaList_, iSourceMin_,
+   iSourceMax_, jSourceMin_, jSourceMax_] :=
+  Module[{iMax, jMax, i, j, vec, row, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], \[Omega], rPlus,
+     r, fact, weight},
+    weight = 1 / (2 \[Pi]);
+    \[Omega] = m \[CapitalOmega];
+    rPlus = 1 + Sqrt[1 - a^2];
+    iMax = Length[rStarList];
+    jMax = Length[thetaList];
+    \[CapitalDelta]rStar = (rStarList[[-1]] - rStarList[[1]]) / (iMax - 1);
+    \[CapitalDelta]\[Theta] = (thetaList[[-1]] - thetaList[[1]]) / (jMax - 1);
+    vec = SparseArray[{}, {iMax jMax}, 0];
+    Do[
+      \[Theta] = thetaList[[j]];
+      Do[
+        vec[[ijToCol[i, j, jMax]]] = Exp[-I m \[CapitalDelta]\[Phi][a, rSubrPlusList[[i]
+          ]]] Seffm[m, rSubrPlusList[[i]] + rPlus, \[Theta]] weight;
+        
+        ,
+        {i, iSourceMin, iSourceMax}
+      ];
+      
+      ,
+      {j, jSourceMin, jSourceMax}
+    ];
+    Do[
+      rSubrPlus = rSubrPlusList[[i]];
+      fact = Exp[-I m \[CapitalDelta]\[Phi][a, rSubrPlus]];
+      r = rSubrPlusList[[i]] + rPlus;
+      \[Theta] = thetaList[[jSourceMin]];
+      row = ijToCol[i, jSourceMin, jMax];
+      vec[[row]] = vec[[row]] + fijM[m, a, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], 
+        \[Omega]] fact PsiPm[m, r, thetaList[[jSourceMin - 1]]] weight;
+      \[Theta] = thetaList[[jSourceMax]];
+      row = ijToCol[i, jSourceMax, jMax];
+      vec[[row]] = vec[[row]] + fijP[m, a, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], 
+        \[Omega]] fact PsiPm[m, r, thetaList[[jSourceMax + 1]]] weight;
+      \[Theta] = thetaList[[jSourceMin - 1]];
+      row = ijToCol[i, jSourceMin - 1, jMax];
+      vec[[row]] = vec[[row]] - fijP[m, a, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], 
+        \[Omega]] fact PsiPm[m, r, thetaList[[jSourceMin]]] weight;
+      \[Theta] = thetaList[[jSourceMax + 1]];
+      row = ijToCol[i, jSourceMax + 1, jMax];
+      vec[[row]] = vec[[row]] - fijM[m, a, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], 
+        \[Omega]] fact PsiPm[m, r, thetaList[[jSourceMax]]] weight;
+      
+      ,
+      {i, iSourceMin, iSourceMax}
+    ];
+    Do[
+      \[Theta] = thetaList[[j]];
+      rSubrPlus = rSubrPlusList[[iSourceMin]];
+      fact = Exp[-I m \[CapitalDelta]\[Phi][a, rSubrPlus]];
+      row = ijToCol[iSourceMin, j, jMax];
+      r = rSubrPlusList[[iSourceMin - 1]] + rPlus;
+      vec[[row]] = vec[[row]] + fiMj[m, a, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], 
+        \[Omega]] fact PsiPm[m, r, \[Theta]] weight;
+      rSubrPlus = rSubrPlusList[[iSourceMax]];
+      fact = Exp[-I m \[CapitalDelta]\[Phi][a, rSubrPlus]];
+      row = ijToCol[iSourceMax, j, jMax];
+      r = rSubrPlusList[[iSourceMax + 1]] + rPlus;
+      vec[[row]] = vec[[row]] + fiPj[m, a, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], 
+        \[Omega]] fact PsiPm[m, r, \[Theta]] weight;
+      rSubrPlus = rSubrPlusList[[iSourceMin - 1]];
+      fact = Exp[-I m \[CapitalDelta]\[Phi][a, rSubrPlus]];
+      row = ijToCol[iSourceMin - 1, j, jMax];
+      r = rSubrPlusList[[iSourceMin]] + rPlus;
+      vec[[row]] = vec[[row]] - fiPj[m, a, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], 
+        \[Omega]] fact PsiPm[m, r, \[Theta]] weight;
+      rSubrPlus = rSubrPlusList[[iSourceMax + 1]];
+      fact = Exp[-I m \[CapitalDelta]\[Phi][a, rSubrPlus]];
+      row = ijToCol[iSourceMax + 1, j, jMax];
+      r = rSubrPlusList[[iSourceMax]] + rPlus;
+      vec[[row]] = vec[[row]] - fiMj[m, a, rSubrPlus, \[Theta], \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], 
+        \[Omega]] fact PsiPm[m, r, \[Theta]] weight;
+      
+      ,
+      {j, jSourceMin, jSourceMax}
+    ];
+    vec
+  ]
+
+
+testSourceVector[m_, wtDiam_, thetaSourceSize_, \[CapitalDelta]rStar_, \[CapitalDelta]\[Theta]_, rStarHguess_,
+   rStarIguess_] :=
+  Module[{rStarList, rSubrPlusList, thetaList, iSourceMin, iSourceMax,
+     jSourceMin, jSourceMax, vec, rStarH, rStarL, rStar0, rStarR, rStarI,
+     jMax, source2D, Phi2D, rPlus},
+    {rStarH, rStarL, rStar0, rStarR, rStarI} = getrStarParams[a, r0, 
+      wtDiam, rStarHguess, rStarIguess];
+    rStarList = getrStarList[\[CapitalDelta]rStar, rStarH, rStarL, rStar0, rStarR, 
+      rStarI];
+    rSubrPlusList = getrSubrPlusList[a, rStarList];
+    thetaList = getThetaList[\[CapitalDelta]\[Theta], thetaSourceSize];
+    {iSourceMin, iSourceMax} = getIsourceBounds[rStarList, rStarH, rStarL,
+       rStar0, rStarR, rStarI];
+    {jSourceMin, jSourceMax} = getJsourceBounds[\[CapitalDelta]\[Theta], thetaSourceSize];
+      
+    vec = sourceVector[m, rStarList, rSubrPlusList, thetaList, iSourceMin,
+       iSourceMax, jSourceMin, jSourceMax];
+    jMax = Length[thetaList];
+    source2D = Partition[vec, jMax][[iSourceMin + 1 ;; iSourceMax - 1,
+       jSourceMin + 1 ;; jSourceMax - 1]];
+    rPlus = 1 + Sqrt[1 - a^2];
+    Phi2D = Table[Exp[-I m \[CapitalDelta]\[Phi][a, rSubrPlusList[[i]]]] PsiPm[m, rSubrPlusList[[
+      i]] + rPlus, thetaList[[j]]] / (2 \[Pi]), {i, iSourceMin + 1, iSourceMax 
+      - 1}, {j, jSourceMin + 1, jSourceMax - 1}];
+    Return[{source2D, Phi2D, rStarList, rSubrPlusList, thetaList, iSourceMin,
+       iSourceMax, jSourceMin, jSourceMax}]
+  ]
+
+
+getFm[sol_, m_, rStarList_, rSubrPlusList_, thetaList_, iSourceMin_, 
+  iSourceMax_, jSourceMin_, jSourceMax_] :=
+  Module[{solSource, \[CapitalPsi], d\[CapitalPsi]drStar, d\[CapitalPsi]d\[Theta], interp, interpDrStar, interpD\[Theta],
+     rStar, \[Theta], \[Omega], rPlus, iMax, jMax, \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], rStar0, r0, rSubrPlus0, 
+    d\[CapitalPhi]dr, d\[CapitalPhi]dt, d\[CapitalPhi]d\[Phi]},
+    \[Omega] = m \[CapitalOmega];
+    rPlus = 1 + Sqrt[1 - a^2];
+    iMax = Length[rStarList];
+    jMax = Length[thetaList];
+    rStar0 = (rStarList[[(iSourceMax + iSourceMin - 1) / 2]] + rStarList[[
+      (iSourceMax + iSourceMin + 1) / 2]]) / 2;
+    rSubrPlus0 = (rSubrPlusList[[(iSourceMax + iSourceMin - 1) / 2]] 
+      + rSubrPlusList[[(iSourceMax + iSourceMin + 1) / 2]]) / 2;
+    r0 = rSubrPlus0 + rPlus;
+    \[CapitalDelta]rStar = (rStarList[[-1]] - rStarList[[1]]) / (iMax - 1);
+    \[CapitalDelta]\[Theta] = (thetaList[[-1]] - thetaList[[1]]) / (jMax - 1);
+    solSource = Partition[sol, jMax];
+    interp[rStar_, \[Theta]_] = Interpolation[Flatten[Table[{rStarList[[i]],
+       thetaList[[j]], solSource[[i, j]]}, {i, (iSourceMax + iSourceMin - 1
+      ) / 2 - 1, (iSourceMax + iSourceMin + 1) / 2 + 1}, {j, (jSourceMax + 
+      jSourceMin - 1) / 2 - 1, (jSourceMax + jSourceMin + 1) / 2 + 1}], 1],
+       InterpolationOrder -> 3][rStar, \[Theta]];
+    interpDrStar[rStar_, \[Theta]_] = D[interp[rStar, \[Theta]], rStar];
+    \[CapitalPsi] = interp[rStar0, \[Pi] / 2];
+    d\[CapitalPsi]drStar = interpDrStar[rStar0, \[Pi] / 2];
+    d\[CapitalPhi]dr =
+      If[m == 0,
+        Re[drStardr[a, rSubrPlus0] d\[CapitalPsi]drStar / r0 - \[CapitalPsi] / r0^2]
+        ,
+        2 Re[(drStardr[a, rSubrPlus0] d\[CapitalPsi]drStar / r0 + \[CapitalPsi] (I m d\[CapitalDelta]\[Phi]dr[a,
+           rSubrPlus0] / r0 - 1 / r0^2)) Exp[I m \[CapitalDelta]\[Phi][a, rSubrPlus0]]]
+      ];
+    d\[CapitalPhi]dt =
+      If[m == 0,
+        0
+        ,
+        2 Re[-I \[Omega] \[CapitalPsi] Exp[I m \[CapitalDelta]\[Phi][a, rSubrPlus0]]] / r0
+      ];
+    d\[CapitalPhi]d\[Phi] =
+      If[m == 0,
+        0
+        ,
+        2 Re[I m \[CapitalPsi] Exp[I m \[CapitalDelta]\[Phi][a, rSubrPlus0]]] / r0
+      ];
+    {d\[CapitalPhi]dt, d\[CapitalPhi]dr, d\[CapitalPhi]d\[Phi]}
+  ]
+
+
+mRunField[m_, wtDiam_, thetaSourceSize_, \[CapitalDelta]rStar_, \[CapitalDelta]\[Theta]_, rStarHguess_, 
+  rStarIguess_] :=
+  Module[{sol, rStarList, rSubrPlusList, thetaList, iSourceMin, iSourceMax,
+     jSourceMin, jSourceMax, iMax, jMax, mat, vec, rStarH, rStarL, rStar0,
+     rStarR, rStarI},
+    {rStarH, rStarL, rStar0, rStarR, rStarI} = getrStarParams[a, r0, 
+      wtDiam, rStarHguess, rStarIguess];
+    rStarList = getrStarList[\[CapitalDelta]rStar, rStarH, rStarL, rStar0, rStarR, 
+      rStarI];
+    rSubrPlusList = getrSubrPlusList[a, rStarList];
+    thetaList = getThetaList[\[CapitalDelta]\[Theta], thetaSourceSize];
+    {iSourceMin, iSourceMax} = getIsourceBounds[rStarList, rStarH, rStarL,
+       rStar0, rStarR, rStarI];
+    {jSourceMin, jSourceMax} = getJsourceBounds[\[CapitalDelta]\[Theta], thetaSourceSize];
+      
+    iMax = Length[rStarList];
+    jMax = Length[thetaList];
+    mat = couplingMatrixFast[m, rStarList, rSubrPlusList, thetaList];
+      
+    vec = sourceVector[m, rStarList, rSubrPlusList, thetaList, iSourceMin,
+       iSourceMax, jSourceMin, jSourceMax];
+    LinearSolve[mat, vec, Method -> "Pardiso"]
+  ]
+
+
+mRun[m_, wtDiam_, thetaSourceSize_, \[CapitalDelta]rStar_, \[CapitalDelta]\[Theta]_, rStarHguess_, rStarIguess_
+  ] :=
+  Module[{sol, rStarList, rSubrPlusList, thetaList, iSourceMin, iSourceMax,
+     jSourceMin, jSourceMax, iMax, jMax, mat, vec, rStarH, rStarL, rStar0,
+     rStarR, rStarI},
+    {rStarH, rStarL, rStar0, rStarR, rStarI} = getrStarParams[a, r0, 
+      wtDiam, rStarHguess, rStarIguess];
+    rStarList = getrStarList[\[CapitalDelta]rStar, rStarH, rStarL, rStar0, rStarR, 
+      rStarI];
+    rSubrPlusList = getrSubrPlusList[a, rStarList];
+    thetaList = getThetaList[\[CapitalDelta]\[Theta], thetaSourceSize];
+    {iSourceMin, iSourceMax} = getIsourceBounds[rStarList, rStarH, rStarL,
+       rStar0, rStarR, rStarI];
+    {jSourceMin, jSourceMax} = getJsourceBounds[\[CapitalDelta]\[Theta], thetaSourceSize];
+      
+    iMax = Length[rStarList];
+    jMax = Length[thetaList];
+    mat = couplingMatrixFast[m, rStarList, rSubrPlusList, thetaList];
+      
+    vec = sourceVector[m, rStarList, rSubrPlusList, thetaList, iSourceMin,
+       iSourceMax, jSourceMin, jSourceMax];
+    sol = LinearSolve[mat, vec, Method -> "Pardiso"];
+    getFm[sol, m, rStarList, rSubrPlusList, thetaList, iSourceMin, iSourceMax,
+       jSourceMin, jSourceMax]
+  ]
+
+
+R2[n_, h1_, h2_, A1_, A2_] := A1 + (h1^n (-A1 + A2)) / (h1^n - h2^n)
+
+
+R3[n_, h1_, h2_, h3_, A1_, A2_, A3_] := (h2^n (h2 - h3) h3^n A1 + h1^
+  n (-(h1 - h3) h3^n A2 + (h1 - h2) h2^n A3)) / (h1^n (h1 - h2) h2^n + 
+  h3^n (h2^n (h2 - h3) + h1^n (-h1 + h3)))
+
+
+resolutionConvergeFm[m_, rStarHguess_, rStarIguess_, wtDiam_, thetaSourceSize_,
+   tol_, cumulF_] := Module[{converge, converge2, converge3, \[CapitalDelta]rStarGuess,
+   rStarH, rStarL, rStar0, rStarR, rStarI, j, \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], Fm, test, newFm,
+   oldFm},
+  {rStarH, rStarL, rStar0, rStarR, rStarI} = getrStarParams[a, r0, wtDiam,
+     rStarHguess, rStarIguess];
+  converge = {};
+  \[CapitalDelta]rStarGuess = 0.7;
+  j = Round[wtDiam / \[CapitalDelta]rStarGuess];
+  If[EvenQ[j],
+    j = j + 1
+  ];
+  \[CapitalDelta]rStar = wtDiam / j;
+  \[CapitalDelta]\[Theta] = thetaSourceSize / (j);
+  Fm = mRun[m, wtDiam, thetaSourceSize, \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], rStarHguess, rStarIguess
+    ];
+  converge = Append[converge, {\[CapitalDelta]rStar, Fm}];
+  \[CapitalDelta]rStarGuess = \[CapitalDelta]rStarGuess * 0.7;
+  j = Round[wtDiam / \[CapitalDelta]rStarGuess];
+  If[EvenQ[j],
+    j = j + 1
+  ];
+  \[CapitalDelta]rStar = wtDiam / j;
+  \[CapitalDelta]\[Theta] = thetaSourceSize / (j);
+  Fm = mRun[m, wtDiam, thetaSourceSize, \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], rStarHguess, rStarIguess
+    ];
+  converge = Append[converge, {\[CapitalDelta]rStar, Fm}];
+  oldFm = Fm;
+  newFm = R2[2, converge[[-2, 1]], converge[[-1, 1]], converge[[-2, 2
+    ]], converge[[-1, 2]]];
+  test = 0;
+  While[
+    test == 0 || AnyTrue[
+      Table[
+        Abs[newFm[[j]] - oldFm[[j]]] > 0.3 tol If[Max[Abs[cumulF[[j]]
+          ], Abs[newFm[[j]]]] < 10 ^ -10,
+          10^10
+          ,
+          Max[Abs[cumulF[[j]]], Abs[newFm[[j]]]]
+        ]
+        ,
+        {j, 2, 2}
+      ]
+      ,
+      TrueQ
+    ]
+    ,
+    test = 1;
+    oldFm = newFm;
+    \[CapitalDelta]rStarGuess = \[CapitalDelta]rStarGuess * 0.7;
+    j = Round[wtDiam / \[CapitalDelta]rStarGuess];
+    If[EvenQ[j],
+      j = j + 1
+    ];
+    \[CapitalDelta]rStar = wtDiam / j;
+    \[CapitalDelta]\[Theta] = thetaSourceSize / (j);
+    Fm = mRun[m, wtDiam, thetaSourceSize, \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], rStarHguess, rStarIguess
+      ];
+    converge = Append[converge, {\[CapitalDelta]rStar, Fm}];
+    oldFm = newFm;
+    newFm = R3[2, converge[[-3, 1]], converge[[-2, 1]], converge[[-1,
+       1]], converge[[-3, 2]], converge[[-2, 2]], converge[[-1, 2]]];
+    Print["\[CapitalDelta]r* = ", \[CapitalDelta]rStar, ", \[CapitalDelta]\[Theta] = ", \[CapitalDelta]\[Theta], ", Fm = ", NumberForm[newFm,
+       10]];
+    
+  ];
+  Return[newFm]
+]
+
+
+domainConvergeFm[m_, rStarHguess_, wtDiamGuess_, thetaSourceSize_, tol_,
+   cumulF_] := Module[{j, wtDiam, rStar0, converge, \[CapitalDelta]rStarIguess, \[CapitalDelta]rStarI,
+   test, newFm, oldFm, rStarIguess, Fm},
+  j = Ceiling[(2 \[Pi] / \[CapitalOmega]) / wtDiamGuess];
+  wtDiam = (2 \[Pi] / \[CapitalOmega]) / j;
+  rStar0 = getrStarFromrSubrPlus[a, r0 - (1 - Sqrt[1 - a^2])];
+  rStarIguess = Round[100.0 / wtDiam] wtDiam + wtDiam / 2 + rStar0;
+  converge = {};
+  \[CapitalDelta]rStarIguess = 50.0;
+  j = Ceiling[\[CapitalDelta]rStarIguess / (2 \[Pi] / \[CapitalOmega])];
+  \[CapitalDelta]rStarI = j (2 \[Pi] / \[CapitalOmega]);
+  Fm = resolutionConvergeFm[m, rStarHguess, rStarIguess, wtDiam, thetaSourceSize,
+     tol, cumulF];
+  converge = Append[converge, {1 / rStarIguess, Fm}];
+  Print["r*I = ", rStarIguess, ", Fm = ", NumberForm[Fm, 10]];
+  rStarIguess = rStarIguess + \[CapitalDelta]rStarI;
+  Fm = resolutionConvergeFm[m, rStarHguess, rStarIguess, wtDiam, thetaSourceSize,
+     tol, cumulF];
+  converge = Append[converge, {1 / rStarIguess, Fm}];
+  oldFm = Fm;
+  newFm = R2[3, converge[[-2, 1]], converge[[-1, 1]], converge[[-2, 2
+    ]], converge[[-1, 2]]];
+  Print["r*I = ", rStarIguess, ", Fm = ", NumberForm[newFm, 10]];
+  rStarIguess = rStarIguess + \[CapitalDelta]rStarI;
+  test = 0;
+  While[
+    test == 0 || AnyTrue[
+      Table[
+        Abs[newFm[[j]] - oldFm[[j]]] > tol If[Max[Abs[cumulF[[j]]], Abs[
+          newFm[[j]]]] < 10 ^ -10,
+          10^10
+          ,
+          Max[Abs[cumulF[[j]]], Abs[newFm[[j]]]]
+        ]
+        ,
+        {j, 2, 2}
+      ]
+      ,
+      TrueQ
+    ]
+    ,
+    test = 1; Fm = resolutionConvergeFm[m, rStarHguess, rStarIguess, 
+      wtDiam, thetaSourceSize, tol, cumulF]; converge = Append[converge, {1
+       / rStarIguess, Fm}]; oldFm = newFm; newFm = R3[3, converge[[-3, 1]],
+       converge[[-2, 1]], converge[[-1, 1]], converge[[-3, 2]], converge[[-
+      2, 2]], converge[[-1, 2]]]; Print["r*I = ", rStarIguess, ", Fm = ", NumberForm[
+      newFm, 10]]; rStarIguess = rStarIguess + \[CapitalDelta]rStarI; 
+  ];
+  Return[newFm]
+]
+
+
+getF[rStarHguess_, wtDiamGuess_, thetaSourceSize_, tol_] :=
+  Module[{m, cumulF, FmList, Fm},
+    m = 0;
+    Print["m = ", m];
+    Fm = domainConvergeFm[m, rStarHguess, wtDiamGuess, thetaSourceSize,
+       0.1 tol, {0, 0, 0}];
+    FmList = {Fm};
+    cumulF = Fm;
+    m = 1;
+    Print["m = ", m];
+    Fm = domainConvergeFm[m, rStarHguess, wtDiamGuess, thetaSourceSize,
+       0.3 tol, {0, 0, 0}];
+    AppendTo[FmList, Fm];
+    cumulF = cumulF + Fm;
+    m = 2;
+    Print["m = ", m];
+    Fm = domainConvergeFm[m, rStarHguess, wtDiamGuess, thetaSourceSize,
+       1.0 tol, {0, 0, 0}];
+    AppendTo[FmList, Fm];
+    cumulF = cumulF + Fm;
+    Do[
+      Print["m = ", m];
+      Fm = domainConvergeFm[m, rStarHguess, wtDiamGuess, thetaSourceSize,
+         3.0 tol, cumulF];
+      AppendTo[FmList, Fm];
+      cumulF = cumulF + Fm;
+      ,
+      {m, 3, 20}
+    ];
+    Return[FmList]
+  ]; 
