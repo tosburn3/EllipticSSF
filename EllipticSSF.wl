@@ -1196,7 +1196,40 @@ mRunField[m_, wtDiam_, thetaSourceSize_, \[CapitalDelta]rStar_, \[CapitalDelta]\
       
     vec = sourceVector[m, rStarList, rSubrPlusList, thetaList, iSourceMin,
        iSourceMax, jSourceMin, jSourceMax];
-    LinearSolve[mat, vec, Method -> "Pardiso"]
+    sol = LinearSolve[mat, vec, Method -> "Pardiso"];
+    sol = Partition[sol, jMax];
+    sol = Flatten[Table[{rStarList[[i]],thetaList[[j]],sol[[i,j]]},{i,1,iMax},{j,1,jMax}],1]
+  ]
+
+
+mRunFieldRet[m_, wtDiam_, thetaSourceSize_, \[CapitalDelta]rStar_, \[CapitalDelta]\[Theta]_, rStarHguess_, 
+  rStarIguess_] :=
+  Module[{sol, sing, rPlus, rStarList, rSubrPlusList, thetaList, iSourceMin, iSourceMax,
+     jSourceMin, jSourceMax, iMax, jMax, mat, vec, rStarH, rStarL, rStar0,
+     rStarR, rStarI},
+    {rStarH, rStarL, rStar0, rStarR, rStarI} = getrStarParams[a, r0, 
+      wtDiam, rStarHguess, rStarIguess];
+    rStarList = getrStarList[\[CapitalDelta]rStar, rStarH, rStarL, rStar0, rStarR, 
+      rStarI];
+    rSubrPlusList = getrSubrPlusList[a, rStarList];
+    thetaList = getThetaList[\[CapitalDelta]\[Theta], thetaSourceSize];
+    {iSourceMin, iSourceMax} = getIsourceBounds[rStarList, rStarH, rStarL,
+       rStar0, rStarR, rStarI];
+    {jSourceMin, jSourceMax} = getJsourceBounds[\[CapitalDelta]\[Theta], thetaSourceSize];
+      
+    iMax = Length[rStarList];
+    jMax = Length[thetaList];
+    mat = couplingMatrixFast[m, rStarList, rSubrPlusList, thetaList];
+      
+    vec = sourceVector[m, rStarList, rSubrPlusList, thetaList, iSourceMin,
+       iSourceMax, jSourceMin, jSourceMax];
+    sol = LinearSolve[mat, vec, Method -> "Pardiso"];
+    sol = Partition[sol, jMax];
+    rPlus = 1+Sqrt[1-a^2];
+    sing = Table[If[(iSourceMin<=i<=iSourceMax)&&(jSourceMin<=j<=jSourceMax),
+    PsiPm[m, rSubrPlusList[[i]]+rPlus, thetaList[[j]]]Exp[-I m \[CapitalDelta]\[Phi][a, rSubrPlusList[[i]]]]/(2 \[Pi])
+    ,0],{i,1,iMax},{j,1,jMax}];
+    sol = Flatten[Table[{rStarList[[i]],thetaList[[j]],sol[[i,j]]+sing[[i,j]]},{i,1,iMax},{j,1,jMax}],1]
   ]
 
 
@@ -1220,6 +1253,33 @@ mRun[m_, wtDiam_, thetaSourceSize_, \[CapitalDelta]rStar_, \[CapitalDelta]\[Thet
     mat = couplingMatrixFast[m, rStarList, rSubrPlusList, thetaList];
       
     vec = sourceVector[m, rStarList, rSubrPlusList, thetaList, iSourceMin,
+       iSourceMax, jSourceMin, jSourceMax];
+    sol = LinearSolve[mat, vec, Method -> "Pardiso"];
+    getFm[sol, m, rStarList, rSubrPlusList, thetaList, iSourceMin, iSourceMax,
+       jSourceMin, jSourceMax]
+  ]
+
+
+mRunFourth[m_, wtDiam_, thetaSourceSize_, \[CapitalDelta]rStar_, \[CapitalDelta]\[Theta]_, rStarHguess_, rStarIguess_
+  ] :=
+  Module[{sol, rStarList, rSubrPlusList, thetaList, iSourceMin, iSourceMax,
+     jSourceMin, jSourceMax, iMax, jMax, mat, vec, rStarH, rStarL, rStar0,
+     rStarR, rStarI},
+    {rStarH, rStarL, rStar0, rStarR, rStarI} = getrStarParams[a, r0, 
+      wtDiam, rStarHguess, rStarIguess];
+    rStarList = getrStarList[\[CapitalDelta]rStar, rStarH, rStarL, rStar0, rStarR, 
+      rStarI];
+    rSubrPlusList = getrSubrPlusList[a, rStarList];
+    thetaList = getThetaList[\[CapitalDelta]\[Theta], thetaSourceSize];
+    {iSourceMin, iSourceMax} = getIsourceBounds[rStarList, rStarH, rStarL,
+       rStar0, rStarR, rStarI];
+    {jSourceMin, jSourceMax} = getJsourceBounds[\[CapitalDelta]\[Theta], thetaSourceSize];
+      
+    iMax = Length[rStarList];
+    jMax = Length[thetaList];
+    mat = couplingMatrixFourth[m, rStarList, rSubrPlusList, thetaList];
+      
+    vec = sourceVectorFourth[m, rStarList, rSubrPlusList, thetaList, iSourceMin,
        iSourceMax, jSourceMin, jSourceMax];
     sol = LinearSolve[mat, vec, Method -> "Pardiso"];
     getFm[sol, m, rStarList, rSubrPlusList, thetaList, iSourceMin, iSourceMax,
@@ -1275,19 +1335,6 @@ resolutionConvergeFm[m_, rStarHguess_, rStarIguess_, wtDiam_, thetaSourceSize_,
     oldFm = Fm;
     newFm = R2[2, converge[[-2, 1]], converge[[-1, 1]], converge[[-2,
        2]], converge[[-1, 2]]];
-    \[CapitalDelta]rStarGuess = \[CapitalDelta]rStarGuess * 0.7;
-    j = Round[wtDiam / \[CapitalDelta]rStarGuess];
-    If[EvenQ[j],
-      j = j + 1
-    ];
-    \[CapitalDelta]rStar = wtDiam / j;
-    \[CapitalDelta]\[Theta] = thetaSourceSize / (j);
-    Fm = mRun[m, wtDiam, thetaSourceSize, \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], rStarHguess, rStarIguess
-      ];
-    converge = Append[converge, {\[CapitalDelta]rStar, Fm}];
-    oldFm = newFm;
-    newFm = R3[2, converge[[-3, 1]], converge[[-2, 1]], converge[[-1,
-       1]], converge[[-3, 2]], converge[[-2, 2]], converge[[-1, 2]]];
     test = 0;
     While[
       test == 0 ||
@@ -1320,8 +1367,8 @@ resolutionConvergeFm[m_, rStarHguess_, rStarIguess_, wtDiam_, thetaSourceSize_,
         rStarIguess];
       converge = Append[converge, {\[CapitalDelta]rStar, Fm}];
       oldFm = newFm;
-      newFm = R4[2, converge[[-4, 1]], converge[[-3, 1]], converge[[-2, 1]], converge[[-
-        1, 1]], converge[[-4, 2]], converge[[-3, 2]], converge[[-2, 2]], converge[[-1, 2]]];
+      newFm =  R3[2, converge[[-3, 1]], converge[[-2, 1]], converge[[-1,
+       1]], converge[[-3, 2]], converge[[-2, 2]], converge[[-1, 2]]];
       Print["\[CapitalDelta]r* = ", \[CapitalDelta]rStar, ", \[CapitalDelta]\[Theta] = ", \[CapitalDelta]\[Theta], ", Fm = ", NumberForm[newFm,
          10]];
       
@@ -1354,14 +1401,6 @@ domainConvergeFm[m_, rStarHguess_, wtDiamGuess_, thetaSourceSize_, tol_,
     oldFm = Fm;
     newFm = R2[3, converge[[-2, 1]], converge[[-1, 1]], converge[[-2,
        2]], converge[[-1, 2]]];
-    Print["r*I = ", rStarIguess, ", Fm = ", NumberForm[newFm, 10]];
-    rStarIguess = rStarIguess + \[CapitalDelta]rStarI;
-    Fm = resolutionConvergeFm[m, rStarHguess, rStarIguess, wtDiam, thetaSourceSize,
-       tol, cumulF];
-    converge = Append[converge, {1 / rStarIguess, Fm}];
-    oldFm = newFm;
-    newFm = R3[3, converge[[-3, 1]], converge[[-2, 1]], converge[[-1,
-       1]], converge[[-3, 2]], converge[[-2, 2]], converge[[-1, 2]]];
     Print["r*I = ", rStarIguess, ", Fm = ", NumberForm[Fm, 10]];
     rStarIguess = rStarIguess + \[CapitalDelta]rStarI;
     test = 0;
@@ -1388,8 +1427,9 @@ domainConvergeFm[m_, rStarHguess_, wtDiamGuess_, thetaSourceSize_, tol_,
         thetaSourceSize, tol, cumulF];
       converge = Append[converge, {1 / rStarIguess, Fm}];
       oldFm = newFm;
-      newFm = R4[3, converge[[-4, 1]], converge[[-3, 1]], converge[[-2, 1]], converge[[-
-        1, 1]], converge[[-4, 2]], converge[[-3, 2]], converge[[-2, 2]], converge[[-1, 2]]];
+      newFm = 
+    newFm = R3[3, converge[[-3, 1]], converge[[-2, 1]], converge[[-1,
+        1]], converge[[-3, 2]], converge[[-2, 2]], converge[[-1, 2]]];
       Print["r*I = ", rStarIguess, ", Fm = ", NumberForm[newFm, 10]];
         
       rStarIguess = rStarIguess + \[CapitalDelta]rStarI;
@@ -1426,7 +1466,6 @@ getF[rStarHguess_, wtDiamGuess_, thetaSourceSize_, tol_] :=
       AppendTo[FmList, Fm];
       cumulF = cumulF + Fm;
       ,
-      {m, 3, 20}
-    ];
+      {m, 3, 20}];
     Return[FmList]
   ]; 
