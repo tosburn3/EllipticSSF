@@ -18,7 +18,7 @@ Wolfram's guide for compiling with WSTP has sections for all major system types:
 
 COMPILING ON WINDOWS
 
-Visual Studio (not Visual Studio Code) is required for compilation on Windows. The easiest way to install GSL is through nuget (https://www.nuget.org/packages/gsl-msvc14-x64/). Then you need to open the very specific commanld line application "VS2022 x86 Native Tools Command Prompt", which is part of Visual Studio. Using that command prompt, here is an example set of commands to compile on Windows:
+Visual Studio (not Visual Studio Code) is required for compilation on Windows. The easiest way to install GSL is through vcpkg (https://solarianprogrammer.com/2020/01/26/getting-started-gsl-gnu-scientific-library-windows-macos-linux/#gsl_installation_windows). Then you need to open the very specific commanld line application "VS2022 x86 Native Tools Command Prompt", which is part of Visual Studio. Using that command prompt, here is an example set of commands to compile on Windows:
 
 SET CL=/nologo /c /DWIN32 /D_WINDOWS /W3 /O2 /DNDEBUG
 
@@ -28,7 +28,7 @@ WSPREP kerr-circular.tm -o testtm.cpp
 
 CL -I"C:/DEV/vcpkg/installed/x64-windows/include/" kerr-circular.cpp testtm.cpp
 
-LINK kerr-circular.obj testtm.obj wstp64i4m.lib C:/DEV/vcpkg/installed/x64-windows/lib/gsl.lib /OUT:kerr-circular.exe
+LINK kerr-circular.obj testtm.obj wstp64i4m.lib C:/Users/tosbu/vcpkg/installed/x64-windows/lib/gsl.lib /OUT:kerr-circular.exe
 
 
 COMPILING ON LINUX/MAC
