@@ -1,0 +1,2020 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* Created By: SaveReadableNotebook *)
+(* https://resources.wolframcloud.com/FunctionRepository/resources/SaveReadableNotebook *)
+
+Notebook[
+ {
+  Cell[
+   BoxData[
+    RowBox[
+     {
+      "SetDirectory",
+      "[",
+      RowBox[{"NotebookDirectory", "[", "]"}],
+      "]"
+     }
+    ]
+   ],
+   "Input",
+   CellLabel -> "In[1]:="
+  ],
+  Cell[
+   BoxData[
+    {
+     RowBox[
+      {RowBox[{"Get", "[", "\"EllipticSSF.wl\"", "]"}], ";"}
+     ],
+     "\[IndentingNewLine]",
+     RowBox[{RowBox[{"r0", "=", "6.0"}], ";"}],
+     "\[IndentingNewLine]",
+     RowBox[{RowBox[{"a", "=", "0.5"}], ";"}],
+     "\[IndentingNewLine]",
+     RowBox[
+      {
+       RowBox[
+        {
+         "v",
+         "=",
+         RowBox[{"1", "/", RowBox[{"Sqrt", "[", "r0", "]"}]}]
+        }
+       ],
+       ";"
+      }
+     ],
+     "\[IndentingNewLine]",
+     RowBox[
+      {
+       RowBox[
+        {
+         "\[CapitalOmega]",
+         "=",
+         RowBox[
+          {
+           RowBox[{"v", "^", "3"}],
+           "/",
+           RowBox[
+            {
+             "(",
+             RowBox[
+              {"1", "+", RowBox[{"a", " ", RowBox[{"v", "^", "3"}]}]}
+             ],
+             ")"
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       ";"
+      }
+     ]
+    }
+   ],
+   "Input",
+   CellLabel -> "In[2]:="
+  ],
+  Cell[
+   BoxData[
+    {
+     RowBox[
+      {
+       RowBox[
+        {
+         "link",
+         "=",
+         RowBox[{"Install", "[", "\"kerr-circular.exe\"", "]"}]
+        }
+       ],
+       ";"
+      }
+     ],
+     "\[IndentingNewLine]",
+     RowBox[
+      {
+       RowBox[
+        {"InitializeSeff", "[", RowBox[{"r0", ",", "a"}], "]"}
+       ],
+       ";"
+      }
+     ]
+    }
+   ],
+   "Input",
+   CellLabel -> "In[7]:="
+  ],
+  Cell[
+   BoxData[
+    RowBox[
+     {
+      RowBox[
+       {
+        "(*",
+        " ",
+        RowBox[
+         {
+          RowBox[
+           {
+            "Get",
+            " ",
+            "scalar",
+            " ",
+            "field",
+            " ",
+            "for",
+            " ",
+            "one",
+            " ",
+            "m"
+           }
+          ],
+          "-",
+          RowBox[
+           {
+            "mode",
+            " ",
+            "with",
+            " ",
+            "a",
+            " ",
+            "prescribed",
+            " ",
+            "resolution"
+           }
+          ]
+         }
+        ],
+        " ",
+        "*)"
+       }
+      ],
+      "\[IndentingNewLine]",
+      RowBox[
+       {
+        RowBox[{RowBox[{"m", "=", "1"}], ";"}],
+        "\[IndentingNewLine]",
+        RowBox[{RowBox[{"wtDiam", "=", "10.0"}], ";"}],
+        "\[IndentingNewLine]",
+        RowBox[
+         {
+          RowBox[
+           {
+            "thetaSourceSize",
+            "=",
+            RowBox[{"N", "[", RowBox[{"\[Pi]", "/", "3"}], "]"}]
+           }
+          ],
+          ";"
+         }
+        ],
+        "\[IndentingNewLine]",
+        RowBox[
+         {
+          RowBox[
+           {
+            "\[CapitalDelta]rStar",
+            "=",
+            RowBox[{"wtDiam", "/", "25"}]
+           }
+          ],
+          ";"
+         }
+        ],
+        "\[IndentingNewLine]",
+        RowBox[
+         {
+          RowBox[
+           {
+            "\[CapitalDelta]\[Theta]",
+            "=",
+            RowBox[{"thetaSourceSize", "/", "11"}]
+           }
+          ],
+          ";"
+         }
+        ],
+        "\[IndentingNewLine]",
+        RowBox[
+         {RowBox[{"rStarHguess", "=", RowBox[{"-", "50.0"}]}], ";"}
+        ],
+        "\[IndentingNewLine]",
+        RowBox[
+         {
+          RowBox[{"rStarIguess", "=", "200.0"}],
+          ";",
+          RowBox[
+           {
+            "data",
+            "=",
+            RowBox[
+             {
+              "mRunField",
+              "[",
+              RowBox[
+               {
+                "m",
+                ",",
+                "wtDiam",
+                ",",
+                "thetaSourceSize",
+                ",",
+                "\[CapitalDelta]rStar",
+                ",",
+                "\[CapitalDelta]\[Theta]",
+                ",",
+                "rStarHguess",
+                ",",
+                " ",
+                "\n",
+                "  ",
+                "rStarIguess"
+               }
+              ],
+              "]"
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   ],
+   "Input"
+  ],
+  Cell[
+   BoxData[
+    RowBox[
+     {"ListPlot3D", "[", RowBox[{"Re", "[", "data", "]"}], "]"}
+    ]
+   ],
+   "Input",
+   CellLabel -> "In[16]:="
+  ],
+  Cell[
+   BoxData[
+    RowBox[
+     {
+      RowBox[
+       {
+        "(*",
+        " ",
+        RowBox[
+         {
+          RowBox[{"Loop", " ", "through", " ", "all", " ", "m"}],
+          "-",
+          RowBox[
+           {
+            "modes",
+            " ",
+            "and",
+            " ",
+            "calculate",
+            " ",
+            "the",
+            " ",
+            "self"
+           }
+          ],
+          "-",
+          RowBox[{"force", " ", "with", " ", "built"}],
+          "-",
+          RowBox[{"in", " ", "convergence", " ", "tests"}]
+         }
+        ],
+        " ",
+        "*)"
+       }
+      ],
+      "\[IndentingNewLine]",
+      RowBox[
+       {
+        RowBox[
+         {
+          RowBox[
+           {
+            "tol",
+            "=",
+            RowBox[
+             {"1.0", "*", RowBox[{"10", "^", RowBox[{"-", "4"}]}]}
+            ]
+           }
+          ],
+          ";"
+         }
+        ],
+        "\[IndentingNewLine]",
+        RowBox[{RowBox[{"wtDiam", "=", "10.0"}], ";"}],
+        "\[IndentingNewLine]",
+        RowBox[
+         {
+          RowBox[
+           {
+            "thetaSourceSize",
+            "=",
+            RowBox[{"N", "[", RowBox[{"\[Pi]", "/", "3"}], "]"}]
+           }
+          ],
+          ";"
+         }
+        ],
+        "\[IndentingNewLine]",
+        RowBox[
+         {RowBox[{"rStarHguess", "=", RowBox[{"-", "50.0"}]}], ";"}
+        ],
+        "\[IndentingNewLine]",
+        RowBox[
+         {
+          "getF",
+          "[",
+          RowBox[
+           {
+            "rStarHguess",
+            ",",
+            " ",
+            "wtDiam",
+            ",",
+            " ",
+            "thetaSourceSize",
+            ",",
+            " ",
+            "tol"
+           }
+          ],
+          "]"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   ],
+   "Input"
+  ],
+  Cell[
+   BoxData[
+    RowBox[
+     {
+      RowBox[
+       {
+        "(*",
+        " ",
+        RowBox[
+         {
+          RowBox[
+           {
+            RowBox[{"Example", " ", "self"}],
+            "-",
+            RowBox[{"force", " ", "data", " ", "with", " ", "tol"}]
+           }
+          ],
+          "=",
+          RowBox[{"10", "^", RowBox[{"-", "6"}]}]
+         }
+        ],
+        " ",
+        "*)"
+       }
+      ],
+      RowBox[
+       {
+        RowBox[
+         {
+          "FmList",
+          "=",
+          RowBox[
+           {
+            "{",
+            RowBox[
+             {
+              RowBox[
+               {
+                "{",
+                RowBox[{"0.`", ",", "0.0012309281566474219`", ",", "0.`"}],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "0.00015968126604928832`",
+                  ",",
+                  RowBox[{"-", "0.0012039768668991094`"}],
+                  ",",
+                  RowBox[{"-", "0.0024266663728388246`"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "0.00007809497873271326`",
+                  ",",
+                  RowBox[{"-", "0.00010610923931257477`"}],
+                  ",",
+                  RowBox[{"-", "0.0011868045855782641`"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "0.00002782277931297088`",
+                  ",",
+                  "0.000012640707436994548`",
+                  ",",
+                  RowBox[{"-", "0.0004228210649135379`"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "8.935030315365008`*^-6",
+                  ",",
+                  "0.000017821027277890014`",
+                  ",",
+                  RowBox[{"-", "0.0001357851058113425`"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "2.7264219991401998`*^-6",
+                  ",",
+                  "0.000010818145741212435`",
+                  ",",
+                  RowBox[{"-", "0.00004143326732792407`"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "8.069752934609027`*^-7",
+                  ",",
+                  "5.760257557638856`*^-6",
+                  ",",
+                  RowBox[{"-", "0.000012263553870802032`"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "2.3414838234763216`*^-7",
+                  ",",
+                  "3.0485044628439053`*^-6",
+                  ",",
+                  RowBox[{"-", "3.5583385562726057`*^-6"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "6.694440776584839`*^-8",
+                  ",",
+                  "1.6773508774639308`*^-6",
+                  ",",
+                  RowBox[{"-", "1.0173500448377633`*^-6"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "1.8958518768232155`*^-8",
+                  ",",
+                  "9.82774076986495`*^-7",
+                  ",",
+                  RowBox[{"-", "2.881114429509985`*^-7"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "5.3244334422227605`*^-9",
+                  ",",
+                  "6.086642808613813`*^-7",
+                  ",",
+                  RowBox[{"-", "8.091508733824964`*^-8"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "1.4893899502691006`*^-9",
+                  ",",
+                  "3.9802792812515507`*^-7",
+                  ",",
+                  RowBox[{"-", "2.2634167412265566`*^-8"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "4.1357598212400575`*^-10",
+                  ",",
+                  "2.7212669140107233`*^-7",
+                  ",",
+                  RowBox[{"-", "6.285088747507399`*^-9"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "1.1364797437418427`*^-10",
+                  ",",
+                  "1.929129567101523`*^-7",
+                  ",",
+                  RowBox[{"-", "1.7271012722929875`*^-9"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "3.207962713438732`*^-11",
+                  ",",
+                  "1.4137255292533825`*^-7",
+                  ",",
+                  RowBox[{"-", "4.875121192751358`*^-10"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "9.175646470484747`*^-12",
+                  ",",
+                  "1.0584123958335959`*^-7",
+                  ",",
+                  RowBox[{"-", "1.3944173471238422`*^-10"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "2.7327596984324443`*^-12",
+                  ",",
+                  "8.088967879744239`*^-8",
+                  ",",
+                  RowBox[{"-", "4.152958095402444`*^-11"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "8.059752497946936`*^-13",
+                  ",",
+                  "6.292024157455976`*^-8",
+                  ",",
+                  RowBox[{"-", "1.224835626875195`*^-11"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  "1.087565283427178`*^-13",
+                  ",",
+                  "4.9702690101934154`*^-8",
+                  ",",
+                  RowBox[{"-", "1.6527662679887052`*^-12"}]
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  RowBox[{"-", "2.729250916856788`*^-13"}],
+                  ",",
+                  "3.979818734090559`*^-8",
+                  ",",
+                  "4.1476258216362605`*^-12"
+                 }
+                ],
+                "}"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "{",
+                RowBox[
+                 {
+                  RowBox[{"-", "5.827129493948134`*^-13"}],
+                  ",",
+                  "3.225644210526176`*^-8",
+                  ",",
+                  "8.85545282987438`*^-12"
+                 }
+                ],
+                "}"
+               }
+              ]
+             }
+            ],
+            "}"
+           }
+          ]
+         }
+        ],
+        ";"
+       }
+      ]
+     }
+    ]
+   ],
+   "Input"
+  ],
+  Cell[
+   BoxData[
+    RowBox[
+     {
+      "ListPlot",
+      "[",
+      RowBox[
+       {
+        RowBox[
+         {
+          "Table",
+          "[",
+          RowBox[
+           {
+            RowBox[
+             {
+              "Total",
+              "[",
+              RowBox[
+               {
+                RowBox[
+                 {
+                  "FmList",
+                  "[",
+                  RowBox[
+                   {
+                    "[",
+                    RowBox[
+                     {RowBox[{"1", ";;", RowBox[{"mMax", "+", "1"}]}], ",", "2"}
+                    ],
+                    "]"
+                   }
+                  ],
+                  "]"
+                 }
+                ],
+                ",",
+                "1"
+               }
+              ],
+              "]"
+             }
+            ],
+            ",",
+            RowBox[{"{", RowBox[{"mMax", ",", "1", ",", "20"}], "}"}]
+           }
+          ],
+          "]"
+         }
+        ],
+        ",",
+        RowBox[{"PlotRange", "->", "All"}]
+       }
+      ],
+      "]"
+     }
+    ]
+   ],
+   "Input",
+   CellLabel -> "In[18]:="
+  ],
+  Cell[
+   BoxData[
+    RowBox[
+     {
+      "ListPlot",
+      "[",
+      RowBox[
+       {
+        RowBox[
+         {
+          "Table",
+          "[",
+          RowBox[
+           {
+            RowBox[
+             {
+              "Total",
+              "[",
+              RowBox[
+               {
+                RowBox[
+                 {
+                  "FmList",
+                  "[",
+                  RowBox[
+                   {
+                    "[",
+                    RowBox[
+                     {RowBox[{"1", ";;", RowBox[{"mMax", "+", "1"}]}], ",", "3"}
+                    ],
+                    "]"
+                   }
+                  ],
+                  "]"
+                 }
+                ],
+                ",",
+                "1"
+               }
+              ],
+              "]"
+             }
+            ],
+            ",",
+            RowBox[{"{", RowBox[{"mMax", ",", "1", ",", "20"}], "}"}]
+           }
+          ],
+          "]"
+         }
+        ],
+        ",",
+        RowBox[{"PlotRange", "->", "All"}]
+       }
+      ],
+      "]"
+     }
+    ]
+   ],
+   "Input",
+   CellLabel -> "In[19]:="
+  ],
+  Cell[
+   BoxData[
+    RowBox[
+     {
+      "InputForm",
+      "[",
+      RowBox[
+       {
+        "cumulF",
+        "=",
+        RowBox[{"Total", "[", RowBox[{"FmList", ",", "1"}], "]"}]
+       }
+      ],
+      "]"
+     }
+    ]
+   ],
+   "Input",
+   CellLabel -> "In[20]:="
+  ],
+  Cell[
+   BoxData[
+    RowBox[
+     {
+      RowBox[
+       {
+        "(*",
+        " ",
+        RowBox[
+         {
+          "m",
+          "-",
+          RowBox[{"mode", " ", "regularization", " ", "parameter"}]
+         }
+        ],
+        " ",
+        "*)"
+       }
+      ],
+      "\[IndentingNewLine]",
+      RowBox[
+       {
+        "Fr4",
+        ":=",
+        RowBox[
+         {
+          "Module",
+          "[",
+          RowBox[
+           {
+            RowBox[{"{", "M", "}"}],
+            ",",
+            "\[IndentingNewLine]",
+            RowBox[
+             {
+              RowBox[{"M", "=", "1"}],
+              ";",
+              "\[IndentingNewLine]",
+              RowBox[
+               {
+                "Return",
+                "[",
+                RowBox[
+                 {
+                  RowBox[
+                   {
+                    RowBox[{"(", RowBox[{"24", RowBox[{"M", "^", "2"}]}], ")"}],
+                    "/",
+                    RowBox[
+                     {
+                      "(",
+                      RowBox[
+                       {
+                        "16",
+                        "\[Pi]",
+                        " ",
+                        "1440",
+                        " ",
+                        RowBox[{"r0", "^", "9"}],
+                        RowBox[
+                         {
+                          "(",
+                          RowBox[
+                           {
+                            RowBox[{"a", " ", "M"}],
+                            "+",
+                            RowBox[
+                             {
+                              "r0",
+                              " ",
+                              RowBox[{"Sqrt", "[", RowBox[{"M", " ", "r0"}], "]"}]
+                             }
+                            ]
+                           }
+                          ],
+                          ")"
+                         }
+                        ],
+                        RowBox[
+                         {
+                          RowBox[
+                           {
+                            "(",
+                            RowBox[
+                             {
+                              RowBox[
+                               {
+                                "2",
+                                " ",
+                                "a",
+                                " ",
+                                RowBox[{"Sqrt", "[", RowBox[{"M", " ", "r0"}], "]"}]
+                               }
+                              ],
+                              "+",
+                              RowBox[
+                               {
+                                "r0",
+                                " ",
+                                RowBox[
+                                 {"(", RowBox[{"r0", "-", RowBox[{"3", " ", "M"}]}], ")"}
+                                ]
+                               }
+                              ]
+                             }
+                            ],
+                            ")"
+                           }
+                          ],
+                          "^",
+                          RowBox[{"(", RowBox[{"7", "/", "2"}], ")"}]
+                         }
+                        ],
+                        RowBox[
+                         {
+                          RowBox[
+                           {
+                            "(",
+                            RowBox[
+                             {
+                              RowBox[{"a", "^", "2"}],
+                              "+",
+                              RowBox[
+                               {
+                                "r0",
+                                " ",
+                                RowBox[
+                                 {"(", RowBox[{"r0", "-", RowBox[{"2", " ", "M"}]}], ")"}
+                                ]
+                               }
+                              ]
+                             }
+                            ],
+                            ")"
+                           }
+                          ],
+                          "^",
+                          RowBox[{"(", RowBox[{"3", "/", "2"}], ")"}]
+                         }
+                        ]
+                       }
+                      ],
+                      ")"
+                     }
+                    ]
+                   }
+                  ],
+                  RowBox[
+                   {
+                    "(",
+                    RowBox[
+                     {
+                      RowBox[
+                       {
+                        RowBox[{"-", "23040"}],
+                        " ",
+                        RowBox[{"a", "^", "14"}],
+                        " ",
+                        RowBox[{"M", "^", "2"}],
+                        " ",
+                        RowBox[{"Sqrt", "[", RowBox[{"M", " ", "r0"}], "]"}]
+                       }
+                      ],
+                      "+",
+                      RowBox[
+                       {
+                        "11520",
+                        " ",
+                        RowBox[{"a", "^", "13"}],
+                        " ",
+                        RowBox[{"M", "^", "2"}],
+                        " ",
+                        "r0",
+                        " ",
+                        RowBox[
+                         {"(", RowBox[{"M", "-", RowBox[{"8", " ", "r0"}]}], ")"}
+                        ]
+                       }
+                      ],
+                      "+",
+                      RowBox[
+                       {
+                        "384",
+                        " ",
+                        RowBox[{"a", "^", "12"}],
+                        " ",
+                        "M",
+                        " ",
+                        "r0",
+                        " ",
+                        RowBox[{"Sqrt", "[", RowBox[{"M", " ", "r0"}], "]"}],
+                        RowBox[
+                         {
+                          "(",
+                          RowBox[
+                           {
+                            RowBox[{"461", " ", RowBox[{"M", "^", "2"}]}],
+                            "-",
+                            RowBox[{"81", " ", "M", " ", "r0"}],
+                            "-",
+                            RowBox[{"360", " ", RowBox[{"r0", "^", "2"}]}]
+                           }
+                          ],
+                          ")"
+                         }
+                        ]
+                       }
+                      ],
+                      "-",
+                      RowBox[
+                       {
+                        "192",
+                        " ",
+                        RowBox[{"a", "^", "11"}],
+                        " ",
+                        "M",
+                        " ",
+                        RowBox[{"r0", "^", "2"}],
+                        RowBox[
+                         {
+                          "(",
+                          RowBox[
+                           {
+                            RowBox[{"307", " ", RowBox[{"M", "^", "3"}]}],
+                            "-",
+                            RowBox[{"3780", " ", RowBox[{"M", "^", "2"}], " ", "r0"}],
+                            "+",
+                            RowBox[{"1233", " ", "M", " ", RowBox[{"r0", "^", "2"}]}],
+                            "+",
+                            RowBox[{"480", " ", RowBox[{"r0", "^", "3"}]}]
+                           }
+                          ],
+                          ")"
+                         }
+                        ]
+                       }
+                      ],
+                      "-",
+                      RowBox[
+                       {
+                        "64",
+                        " ",
+                        RowBox[{"a", "^", "10"}],
+                        " ",
+                        RowBox[{"r0", "^", "2"}],
+                        " ",
+                        RowBox[{"Sqrt", "[", RowBox[{"M", " ", "r0"}], "]"}],
+                        " ",
+                        RowBox[
+                         {
+                          "(",
+                          RowBox[
+                           {
+                            RowBox[{"8549", " ", RowBox[{"M", "^", "4"}]}],
+                            "-",
+                            RowBox[{"3593", " ", RowBox[{"M", "^", "3"}], " ", "r0"}],
+                            "-",
+                            RowBox[
+                             {
+                              "16212",
+                              " ",
+                              RowBox[{"M", "^", "2"}],
+                              " ",
+                              RowBox[{"r0", "^", "2"}]
+                             }
+                            ],
+                            "+",
+                            RowBox[{"6336", " ", "M", " ", RowBox[{"r0", "^", "3"}]}],
+                            "+",
+                            RowBox[{"360", " ", RowBox[{"r0", "^", "4"}]}]
+                           }
+                          ],
+                          ")"
+                         }
+                        ]
+                       }
+                      ],
+                      "+",
+                      RowBox[
+                       {
+                        "32",
+                        " ",
+                        RowBox[{"a", "^", "9"}],
+                        " ",
+                        "M",
+                        " ",
+                        RowBox[{"r0", "^", "3"}],
+                        " ",
+                        RowBox[
+                         {
+                          "(",
+                          RowBox[
+                           {
+                            RowBox[{"2835", " ", RowBox[{"M", "^", "4"}]}],
+                            "-",
+                            RowBox[{"69401", " ", RowBox[{"M", "^", "3"}], " ", "r0"}],
+                            "+",
+                            RowBox[
+                             {
+                              "46565",
+                              " ",
+                              RowBox[{"M", "^", "2"}],
+                              " ",
+                              RowBox[{"r0", "^", "2"}]
+                             }
+                            ],
+                            "+",
+                            RowBox[{"13779", " ", "M", " ", RowBox[{"r0", "^", "3"}]}],
+                            "-",
+                            RowBox[{"8748", " ", RowBox[{"r0", "^", "4"}]}]
+                           }
+                          ],
+                          ")"
+                         }
+                        ]
+                       }
+                      ],
+                      "+",
+                      RowBox[
+                       {
+                        "192",
+                        " ",
+                        RowBox[{"a", "^", "8"}],
+                        " ",
+                        RowBox[{"r0", "^", "3"}],
+                        " ",
+                        RowBox[{"Sqrt", "[", RowBox[{"M", " ", "r0"}], "]"}],
+                        RowBox[
+                         {
+                          "(",
+                          RowBox[
+                           {
+                            RowBox[{"4470", " ", RowBox[{"M", "^", "5"}]}],
+                            "-",
+                            RowBox[{"3621", " ", RowBox[{"M", "^", "4"}], " ", "r0"}],
+                            "-",
+                            RowBox[
+                             {
+                              "15645",
+                              " ",
+                              RowBox[{"M", "^", "3"}],
+                              " ",
+                              RowBox[{"r0", "^", "2"}]
+                             }
+                            ],
+                            "+",
+                            RowBox[
+                             {
+                              "12662",
+                              " ",
+                              RowBox[{"M", "^", "2"}],
+                              " ",
+                              RowBox[{"r0", "^", "3"}]
+                             }
+                            ],
+                            "-",
+                            RowBox[{"1529", " ", "M", " ", RowBox[{"r0", "^", "4"}]}],
+                            "-",
+                            RowBox[{"342", " ", RowBox[{"r0", "^", "5"}]}]
+                           }
+                          ],
+                          ")"
+                         }
+                        ]
+                       }
+                      ],
+                      "+",
+                      RowBox[
+                       {
+                        "16",
+                        " ",
+                        RowBox[{"a", "^", "7"}],
+                        " ",
+                        RowBox[{"r0", "^", "4"}],
+                        " ",
+                        RowBox[
+                         {
+                          "(",
+                          RowBox[
+                           {
+                            RowBox[
+                             {RowBox[{"-", "1479"}], " ", RowBox[{"M", "^", "6"}]}
+                            ],
+                            "+",
+                            RowBox[{"210966", " ", RowBox[{"M", "^", "5"}], " ", "r0"}],
+                            "-",
+                            RowBox[
+                             {
+                              "224760",
+                              " ",
+                              RowBox[{"M", "^", "4"}],
+                              " ",
+                              RowBox[{"r0", "^", "2"}]
+                             }
+                            ],
+                            "-",
+                            RowBox[
+                             {
+                              "49213",
+                              " ",
+                              RowBox[{"M", "^", "3"}],
+                              " ",
+                              RowBox[{"r0", "^", "3"}]
+                             }
+                            ],
+                            "+",
+                            RowBox[
+                             {
+                              "93619",
+                              " ",
+                              RowBox[{"M", "^", "2"}],
+                              " ",
+                              RowBox[{"r0", "^", "4"}]
+                             }
+                            ],
+                            "-",
+                            RowBox[{"19953", " ", "M", " ", RowBox[{"r0", "^", "5"}]}],
+                            "+",
+                            RowBox[{"180", " ", RowBox[{"r0", "^", "6"}]}]
+                           }
+                          ],
+                          ")"
+                         }
+                        ]
+                       }
+                      ],
+                      "-",
+                      RowBox[
+                       {
+                        "16",
+                        " ",
+                        RowBox[{"a", "^", "6"}],
+                        " ",
+                        RowBox[{"r0", "^", "4"}],
+                        " ",
+                        RowBox[{"Sqrt", "[", RowBox[{"M", " ", "r0"}], "]"}],
+                        " ",
+                        RowBox[
+                         {
+                          "(",
+                          RowBox[
+                           {
+                            RowBox[{"43101", " ", RowBox[{"M", "^", "6"}]}],
+                            "-",
+                            RowBox[{"61443", " ", RowBox[{"M", "^", "5"}], " ", "r0"}],
+                            "-",
+                            RowBox[
+                             {
+                              "271980",
+                              " ",
+                              RowBox[{"M", "^", "4"}],
+                              " ",
+                              RowBox[{"r0", "^", "2"}]
+                             }
+                            ],
+                            "+",
+                            RowBox[
+                             {
+                              "343776",
+                              " ",
+                              RowBox[{"M", "^", "3"}],
+                              " ",
+                              RowBox[{"r0", "^", "3"}]
+                             }
+                            ],
+                            "-",
+                            RowBox[
+                             {
+                              "100489",
+                              " ",
+                              RowBox[{"M", "^", "2"}],
+                              " ",
+                              RowBox[{"r0", "^", "4"}]
+                             }
+                            ],
+                            "-",
+                            RowBox[{"7763", " ", "M", " ", RowBox[{"r0", "^", "5"}]}],
+                            "+",
+                            RowBox[{"4158", " ", RowBox[{"r0", "^", "6"}]}]
+                           }
+                          ],
+                          ")"
+                         }
+                        ]
+                       }
+                      ],
+                      "+",
+                      RowBox[
+                       {
+                        "12",
+                        " ",
+                        RowBox[{"a", "^", "5"}],
+                        " ",
+                        RowBox[{"r0", "^", "5"}],
+                        " ",
+                        RowBox[
+                         {
+                          "(",
+                          RowBox[
+                           {
+                            RowBox[
+                             {RowBox[{"-", "2367"}], " ", RowBox[{"M", "^", "7"}]}
+                            ],
+                            "-",
+                            RowBox[{"221220", " ", RowBox[{"M", "^", "6"}], " ", "r0"}],
+                            "+",
+                            RowBox[
+                             {
+                              "337457",
+                              " ",
+                              RowBox[{"M", "^", "5"}],
+                              " ",
+                              RowBox[{"r0", "^", "2"}]
+                             }
+                            ],
+                            "+",
+                            RowBox[
+                             {
+                              "71894",
+                              " ",
+                              RowBox[{"M", "^", "4"}],
+                              " ",
+                              RowBox[{"r0", "^", "3"}]
+                             }
+                            ],
+                            "-",
+                            RowBox[
+                             {
+                              "262111",
+                              " ",
+                              RowBox[{"M", "^", "3"}],
+                              " ",
+                              RowBox[{"r0", "^", "4"}]
+                             }
+                            ],
+                            "+",
+                            RowBox[
+                             {
+                              "111498",
+                              " ",
+                              RowBox[{"M", "^", "2"}],
+                              " ",
+                              RowBox[{"r0", "^", "5"}]
+                             }
+                            ],
+                            "-",
+                            RowBox[{"14459", " ", "M", " ", RowBox[{"r0", "^", "6"}]}],
+                            "+",
+                            RowBox[{"588", " ", RowBox[{"r0", "^", "7"}]}]
+                           }
+                          ],
+                          ")"
+                         }
+                        ]
+                       }
+                      ],
+                      "+",
+                      RowBox[
+                       {
+                        "3",
+                        " ",
+                        RowBox[{"a", "^", "4"}],
+                        " ",
+                        RowBox[{"r0", "^", "5"}],
+                        " ",
+                        RowBox[{"Sqrt", "[", RowBox[{"M", " ", "r0"}], "]"}],
+                        RowBox[
+                         {
+                          "(",
+                          RowBox[
+                           {
+                            RowBox[{"76125", " ", RowBox[{"M", "^", "7"}]}],
+                            "-",
+                            RowBox[{"176307", " ", RowBox[{"M", "^", "6"}], " ", "r0"}],
+                            "-",
+                            RowBox[
+                             {
+                              "1157559",
+                              " ",
+                              RowBox[{"M", "^", "5"}],
+                              " ",
+                              RowBox[{"r0", "^", "2"}]
+                             }
+                            ],
+                            "+",
+                            RowBox[
+                             {
+                              "1949709",
+                              " ",
+                              RowBox[{"M", "^", "4"}],
+                              " ",
+                              RowBox[{"r0", "^", "3"}]
+                             }
+                            ],
+                            "-",
+                            RowBox[
+                             {
+                              "855873",
+                              " ",
+                              RowBox[{"M", "^", "3"}],
+                              " ",
+                              RowBox[{"r0", "^", "4"}]
+                             }
+                            ],
+                            "-",
+                            RowBox[
+                             {
+                              "26505",
+                              " ",
+                              RowBox[{"M", "^", "2"}],
+                              " ",
+                              RowBox[{"r0", "^", "5"}]
+                             }
+                            ],
+                            "+",
+                            RowBox[{"76235", " ", "M", " ", RowBox[{"r0", "^", "6"}]}],
+                            "-",
+                            RowBox[{"8065", " ", RowBox[{"r0", "^", "7"}]}]
+                           }
+                          ],
+                          ")"
+                         }
+                        ]
+                       }
+                      ],
+                      "+",
+                      RowBox[
+                       {
+                        "12",
+                        " ",
+                        RowBox[{"a", "^", "3"}],
+                        " ",
+                        RowBox[{"r0", "^", "7"}],
+                        " ",
+                        RowBox[
+                         {
+                          "(",
+                          RowBox[
+                           {
+                            RowBox[{"76125", " ", RowBox[{"M", "^", "7"}]}],
+                            "-",
+                            RowBox[{"152637", " ", RowBox[{"M", "^", "6"}], " ", "r0"}],
+                            "-",
+                            RowBox[
+                             {
+                              "93174",
+                              " ",
+                              RowBox[{"M", "^", "5"}],
+                              " ",
+                              RowBox[{"r0", "^", "2"}]
+                             }
+                            ],
+                            "+",
+                            RowBox[
+                             {
+                              "281414",
+                              " ",
+                              RowBox[{"M", "^", "4"}],
+                              " ",
+                              RowBox[{"r0", "^", "3"}]
+                             }
+                            ],
+                            "-",
+                            RowBox[
+                             {
+                              "166063",
+                              " ",
+                              RowBox[{"M", "^", "3"}],
+                              " ",
+                              RowBox[{"r0", "^", "4"}]
+                             }
+                            ],
+                            "+",
+                            RowBox[
+                             {
+                              "36555",
+                              " ",
+                              RowBox[{"M", "^", "2"}],
+                              " ",
+                              RowBox[{"r0", "^", "5"}]
+                             }
+                            ],
+                            "-",
+                            RowBox[{"3480", " ", "M", " ", RowBox[{"r0", "^", "6"}]}],
+                            "+",
+                            RowBox[{"460", " ", RowBox[{"r0", "^", "7"}]}]
+                           }
+                          ],
+                          ")"
+                         }
+                        ]
+                       }
+                      ],
+                      "+",
+                      RowBox[
+                       {
+                        "18",
+                        " ",
+                        RowBox[{"a", "^", "2"}],
+                        " ",
+                        RowBox[{"r0", "^", "8"}],
+                        " ",
+                        RowBox[{"Sqrt", "[", RowBox[{"M", " ", "r0"}], "]"}],
+                        " ",
+                        RowBox[
+                         {
+                          "(",
+                          RowBox[
+                           {
+                            RowBox[{"76125", " ", RowBox[{"M", "^", "6"}]}],
+                            "-",
+                            RowBox[{"145182", " ", RowBox[{"M", "^", "5"}], " ", "r0"}],
+                            "+",
+                            RowBox[
+                             {
+                              "70771",
+                              " ",
+                              RowBox[{"M", "^", "4"}],
+                              " ",
+                              RowBox[{"r0", "^", "2"}]
+                             }
+                            ],
+                            "+",
+                            RowBox[
+                             {
+                              "16696",
+                              " ",
+                              RowBox[{"M", "^", "3"}],
+                              " ",
+                              RowBox[{"r0", "^", "3"}]
+                             }
+                            ],
+                            "-",
+                            RowBox[
+                             {
+                              "19905",
+                              " ",
+                              RowBox[{"M", "^", "2"}],
+                              " ",
+                              RowBox[{"r0", "^", "4"}]
+                             }
+                            ],
+                            "+",
+                            RowBox[{"3190", " ", "M", " ", RowBox[{"r0", "^", "5"}]}],
+                            "+",
+                            RowBox[{"225", " ", RowBox[{"r0", "^", "6"}]}]
+                           }
+                          ],
+                          ")"
+                         }
+                        ]
+                       }
+                      ],
+                      "+",
+                      RowBox[
+                       {
+                        "36",
+                        " ",
+                        "a",
+                        " ",
+                        RowBox[{"r0", "^", "10"}],
+                        " ",
+                        RowBox[
+                         {
+                          "(",
+                          RowBox[
+                           {
+                            RowBox[{"25375", " ", RowBox[{"M", "^", "6"}]}],
+                            "-",
+                            RowBox[{"47369", " ", RowBox[{"M", "^", "5"}], " ", "r0"}],
+                            "+",
+                            RowBox[
+                             {
+                              "31856",
+                              " ",
+                              RowBox[{"M", "^", "4"}],
+                              " ",
+                              RowBox[{"r0", "^", "2"}]
+                             }
+                            ],
+                            "-",
+                            RowBox[
+                             {
+                              "8692",
+                              " ",
+                              RowBox[{"M", "^", "3"}],
+                              " ",
+                              RowBox[{"r0", "^", "3"}]
+                             }
+                            ],
+                            "+",
+                            RowBox[
+                             {
+                              "705",
+                              " ",
+                              RowBox[{"M", "^", "2"}],
+                              " ",
+                              RowBox[{"r0", "^", "4"}]
+                             }
+                            ],
+                            "-",
+                            RowBox[{"75", " ", "M", " ", RowBox[{"r0", "^", "5"}]}],
+                            "+",
+                            RowBox[{"40", " ", RowBox[{"r0", "^", "6"}]}]
+                           }
+                          ],
+                          ")"
+                         }
+                        ]
+                       }
+                      ],
+                      "+",
+                      RowBox[
+                       {
+                        "9",
+                        " ",
+                        RowBox[{"r0", "^", "11"}],
+                        " ",
+                        RowBox[{"Sqrt", "[", RowBox[{"M", " ", "r0"}], "]"}],
+                        " ",
+                        RowBox[
+                         {
+                          "(",
+                          RowBox[
+                           {
+                            RowBox[{"25375", " ", RowBox[{"M", "^", "5"}]}],
+                            "-",
+                            RowBox[{"47015", " ", RowBox[{"M", "^", "4"}], " ", "r0"}],
+                            "+",
+                            RowBox[
+                             {
+                              "29014",
+                              " ",
+                              RowBox[{"M", "^", "3"}],
+                              " ",
+                              RowBox[{"r0", "^", "2"}]
+                             }
+                            ],
+                            "-",
+                            RowBox[
+                             {
+                              "4814",
+                              " ",
+                              RowBox[{"M", "^", "2"}],
+                              " ",
+                              RowBox[{"r0", "^", "3"}]
+                             }
+                            ],
+                            "-",
+                            RowBox[{"1365", " ", "M", " ", RowBox[{"r0", "^", "4"}]}],
+                            "+",
+                            RowBox[{"405", " ", RowBox[{"r0", "^", "5"}]}]
+                           }
+                          ],
+                          ")"
+                         }
+                        ]
+                       }
+                      ]
+                     }
+                    ],
+                    ")"
+                   }
+                  ]
+                 }
+                ],
+                "]"
+               }
+              ]
+             }
+            ]
+           }
+          ],
+          "]"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   ],
+   "Input"
+  ],
+  Cell[
+   BoxData[
+    RowBox[
+     {
+      "regFr",
+      "=",
+      RowBox[
+       {
+        "NumberForm",
+        "[",
+        RowBox[
+         {
+          RowBox[
+           {
+            RowBox[{"cumulF", "[", RowBox[{"[", "2", "]"}], "]"}],
+            "+",
+            RowBox[
+             {
+              "Fr4",
+              "/",
+              RowBox[
+               {
+                "(",
+                RowBox[
+                 {
+                  "3",
+                  RowBox[
+                   {"(", RowBox[{"20", "-", RowBox[{"1", "/", "2"}]}], ")"}
+                  ],
+                  RowBox[
+                   {"(", RowBox[{"20", "+", RowBox[{"1", "/", "2"}]}], ")"}
+                  ],
+                  RowBox[
+                   {"(", RowBox[{"20", "+", RowBox[{"3", "/", "2"}]}], ")"}
+                  ]
+                 }
+                ],
+                ")"
+               }
+              ]
+             }
+            ]
+           }
+          ],
+          ",",
+          "10"
+         }
+        ],
+        "]"
+       }
+      ]
+     }
+    ]
+   ],
+   "Input",
+   CellLabel -> "In[22]:="
+  ],
+  Cell[
+   BoxData[
+    RowBox[
+     {
+      RowBox[{"comp", "=", "2"}],
+      ";",
+      RowBox[
+       {
+        "Show",
+        "[",
+        RowBox[
+         {
+          RowBox[
+           {
+            "{",
+            RowBox[
+             {
+              RowBox[
+               {
+                "ListLogLogPlot",
+                "[",
+                RowBox[
+                 {
+                  "{",
+                  RowBox[
+                   {
+                    RowBox[
+                     {
+                      "Abs",
+                      "[",
+                      RowBox[
+                       {
+                        RowBox[
+                         {
+                          "FmList",
+                          "[",
+                          RowBox[{"[", RowBox[{"All", ",", "comp"}], "]"}],
+                          "]"
+                         }
+                        ],
+                        "/",
+                        RowBox[{"cumulF", "[", RowBox[{"[", "comp", "]"}], "]"}]
+                       }
+                      ],
+                      "]"
+                     }
+                    ],
+                    ",",
+                    RowBox[
+                     {
+                      "Abs",
+                      "[",
+                      RowBox[
+                       {
+                        RowBox[
+                         {
+                          "(",
+                          RowBox[
+                           {
+                            RowBox[
+                             {
+                              "FmList",
+                              "[",
+                              RowBox[{"[", RowBox[{"All", ",", "comp"}], "]"}],
+                              "]"
+                             }
+                            ],
+                            "-",
+                            RowBox[
+                             {
+                              "Table",
+                              "[",
+                              RowBox[
+                               {
+                                RowBox[
+                                 {
+                                  "Fr4",
+                                  "/",
+                                  RowBox[
+                                   {
+                                    "(",
+                                    RowBox[
+                                     {
+                                      RowBox[
+                                       {"(", RowBox[{"m", "-", RowBox[{"3", "/", "2"}]}], ")"}
+                                      ],
+                                      RowBox[
+                                       {"(", RowBox[{"m", "-", RowBox[{"1", "/", "2"}]}], ")"}
+                                      ],
+                                      RowBox[
+                                       {"(", RowBox[{"m", "+", RowBox[{"1", "/", "2"}]}], ")"}
+                                      ],
+                                      RowBox[
+                                       {"(", RowBox[{"m", "+", RowBox[{"3", "/", "2"}]}], ")"}
+                                      ]
+                                     }
+                                    ],
+                                    ")"
+                                   }
+                                  ]
+                                 }
+                                ],
+                                ",",
+                                RowBox[{"{", RowBox[{"m", ",", "0", ",", "20"}], "}"}]
+                               }
+                              ],
+                              "]"
+                             }
+                            ]
+                           }
+                          ],
+                          ")"
+                         }
+                        ],
+                        "/",
+                        RowBox[{"cumulF", "[", RowBox[{"[", "comp", "]"}], "]"}]
+                       }
+                      ],
+                      "]"
+                     }
+                    ]
+                   }
+                  ],
+                  "}"
+                 }
+                ],
+                "]"
+               }
+              ],
+              ",",
+              RowBox[
+               {
+                "LogLogPlot",
+                "[",
+                RowBox[
+                 {
+                  RowBox[
+                   {
+                    "{",
+                    RowBox[
+                     {
+                      RowBox[{"260", RowBox[{"x", "^", RowBox[{"-", "4"}]}]}],
+                      ",",
+                      RowBox[
+                       {"3000", " ", RowBox[{"x", "^", RowBox[{"-", "6"}]}]}
+                      ]
+                     }
+                    ],
+                    "}"
+                   }
+                  ],
+                  ",",
+                  RowBox[{"{", RowBox[{"x", ",", "1", ",", "30"}], "}"}]
+                 }
+                ],
+                "]"
+               }
+              ]
+             }
+            ],
+            "}"
+           }
+          ],
+          ",",
+          RowBox[{"Frame", "->", "True"}],
+          ",",
+          RowBox[
+           {
+            "FrameLabel",
+            "->",
+            RowBox[
+             {
+              "{",
+              RowBox[
+               {
+                "\"m\"",
+                ",",
+                "\"\!\(\*TemplateBox[{\"F\", \"r\", \"m\"},\"Subsuperscript\"]\)\""
+               }
+              ],
+              "}"
+             }
+            ]
+           }
+          ]
+         }
+        ],
+        "]"
+       }
+      ]
+     }
+    ]
+   ],
+   "Input",
+   CellLabel -> "In[24]:="
+  ]
+ },
+ DockedCells -> { },
+ FrontEndVersion -> "13.2 for Microsoft Windows (64-bit) (January 30, 2023)",
+ StyleDefinitions -> "Default.nb",
+ ExpressionUUID -> "b499b251-7475-48f4-9381-14b5774b8cbe"
+]
