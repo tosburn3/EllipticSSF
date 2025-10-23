@@ -18,7 +18,7 @@ Wolfram's guide for compiling with WSTP has sections for all major system types:
 
 COMPILING ON WINDOWS
 
-Visual Studio (not Visual Studio Code) is required for compilation on Windows. The easiest way to install GSL is through vcpkg (https://solarianprogrammer.com/2020/01/26/getting-started-gsl-gnu-scientific-library-windows-macos-linux/#gsl_installation_windows). Then you need to open the very specific commanld line application "VS2022 x86 Native Tools Command Prompt", which is part of Visual Studio. Using that command prompt, here is an example set of commands to compile on Windows:
+Visual Studio (not Visual Studio Code) is required for compilation on Windows. The easiest way to install GSL is through vcpkg (https://solarianprogrammer.com/2020/01/26/getting-started-gsl-gnu-scientific-library-windows-macos-linux/#gsl_installation_windows). To interface WSTP with Visual Studio, you have to copy some files from the Mathematica directories into the Visual Studio directories, see "Installing the WSTP Components" in the WSTP guide (https://reference.wolfram.com/language/tutorial/WSTPDeveloperGuide-Windows.html, and here is a helpful reference for more recent versions of Visual Studio: https://mathematica.stackexchange.com/questions/232846/where-to-place-the-essential-wstp-files-in-visual-studio-2019). Then you need to open the very specific commanld line application "VS20XX x86 Native Tools Command Prompt", which is part of Visual Studio. Using that command prompt, here is an example set of commands to compile on Windows:
 
 SET CL=/nologo /c /DWIN32 /D_WINDOWS /W3 /O2 /DNDEBUG
 
