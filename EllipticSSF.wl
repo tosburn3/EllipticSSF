@@ -11,9 +11,9 @@ Seffm[m_, r_, \[Theta]_] := None;
 (* These global variables are prototypes that must be overwritten with actual 
 values in the notebook where "EllipticSSF.wl" is imported via "Get[]" *)
 
-r0 = None; 
+r0 = None;
 
-a = None; 
+a = None;
 
 v = None; (* v = 1/Sqrt[r0] *)
 
@@ -565,8 +565,18 @@ couplingMatrixFast[m_, rStarList_, rSubrPlusList_, thetaList_] :=
         Join[{{1, 1} -> 1, {jMax, jMax} -> 1, Band[{2, 2}, {jMax - 1,
            jMax - 1}] -> -3 / (2 \[CapitalDelta]rStar), Band[{2, 2 + jMax}, {jMax - 1, 2 jMax
            - 1}] -> 2 / \[CapitalDelta]rStar, Band[{2, 2 + 2 jMax}, {jMax - 1, 3 jMax - 1}] ->
-           -1 / (2 \[CapitalDelta]rStar), Band[{iMax jMax - 2 - (jMax - 3), iMax jMax - 2 - (
-          jMax - 3)}, {iMax jMax, iMax jMax}] -> 1}, Table[{ijToCol[i, 1, jMax],
+           -1 / (2 \[CapitalDelta]rStar), 
+           
+           Band[{iMax jMax - 1 - (jMax - 3), iMax jMax - 1 - (jMax - 3)}, {iMax jMax - 1, iMax jMax - 1}] ->
+            - 3 / (2 \[CapitalDelta]rStar), 
+          Band[{iMax jMax - 1 - (jMax - 3), ijToCol[iMax - 1, 2, jMax]}, {iMax jMax - 1, ijToCol[iMax - 1, 2, jMax] + jMax - 3}] -> 
+           2 / \[CapitalDelta]rStar, 
+          Band[{iMax jMax - 1 - (jMax - 3), ijToCol[iMax - 2, 2, jMax]}, {iMax jMax - 1, ijToCol[iMax - 2, 2, jMax] + jMax - 3}] -> 
+           -1 / (2 \[CapitalDelta]rStar)
+           
+           }, 
+           
+           Table[{ijToCol[i, 1, jMax],
            ijToCol[i, 1, jMax]} -> -3 / (2 \[CapitalDelta]\[Theta]), {i, 2, iMax - 1}], Table[{ijToCol[
           i, 1, jMax], ijToCol[i, 2, jMax]} -> 2 / \[CapitalDelta]\[Theta], {i, 2, iMax - 1}], Table[
           {ijToCol[i, 1, jMax], ijToCol[i, 3, jMax]} -> -1 / (2 \[CapitalDelta]\[Theta]), {i, 2, iMax
@@ -576,21 +586,35 @@ couplingMatrixFast[m_, rStarList_, rSubrPlusList_, thetaList_] :=
            jMax], ijToCol[i, jMax - 2, jMax]} -> -1 / (2 \[CapitalDelta]\[Theta]), {i, 2, iMax - 1}]
           ]
         ,
+        
         Join[{Band[{2, 2}, {jMax - 1, jMax - 1}] -> I \[Omega] - 3 / (2 \[CapitalDelta]rStar
           ), Band[{2, ijToCol[2, 2, jMax]}, {jMax - 1, ijToCol[2, 2, jMax] + jMax
            - 3}] -> 2 / \[CapitalDelta]rStar, Band[{2, ijToCol[3, 2, jMax]}, {jMax - 1, ijToCol[
-          3, 2, jMax] + jMax - 3}] -> -1 / (2 \[CapitalDelta]rStar), Band[{iMax jMax - 1 - (jMax
-           - 3), iMax jMax - 1 - (jMax - 3)}, {iMax jMax - 1, iMax jMax - 1}] ->
-           -(I + \[CapitalDelta]rStar \[Omega]) (2 I + \[CapitalDelta]rStar \[Omega]) / \[CapitalDelta]rStar^2, Band[{iMax jMax - 1 - (
-          jMax - 3), ijToCol[iMax - 1, 2, jMax]}, {iMax jMax - 1, ijToCol[iMax 
-          - 1, 2, jMax] + jMax - 3}] -> (-5 + 4 I \[CapitalDelta]rStar \[Omega]) / \[CapitalDelta]rStar^2, Band[{iMax
-           jMax - 1 - (jMax - 3), ijToCol[iMax - 2, 2, jMax]}, {iMax jMax - 1, 
-          ijToCol[iMax - 2, 2, jMax] + jMax - 3}] -> (4 - I \[CapitalDelta]rStar \[Omega]) / \[CapitalDelta]rStar^
-          2, Band[{iMax jMax - 1 - (jMax - 3), ijToCol[iMax - 3, 2, jMax]}, {iMax
-           jMax - 1, ijToCol[iMax - 3, 2, jMax] + jMax - 3}] -> -1 / \[CapitalDelta]rStar^2},
-           Table[{ijToCol[i, 1, jMax], ijToCol[i, 1, jMax]} -> 1, {i, 1, iMax}],
-           Table[{ijToCol[i, jMax, jMax], ijToCol[i, jMax, jMax]} -> 1, {i, 1, 
-          iMax}]]
+          3, 2, jMax] + jMax - 3}] -> -1 / (2 \[CapitalDelta]rStar), 
+          
+          (*Band[{iMax jMax - 1 - (jMax - 3), iMax jMax - 1 - (jMax - 3)}, {iMax jMax - 1, iMax jMax - 1}] ->
+           -(I + \[CapitalDelta]rStar \[Omega]) (2 I + \[CapitalDelta]rStar \[Omega]) / \[CapitalDelta]rStar^2, 
+          Band[{iMax jMax - 1 - (jMax - 3), ijToCol[iMax - 1, 2, jMax]}, {iMax jMax - 1, ijToCol[iMax - 1, 2, jMax] + jMax - 3}] -> 
+           (-5 + 4 I \[CapitalDelta]rStar \[Omega]) / \[CapitalDelta]rStar^2, 
+          Band[{iMax jMax - 1 - (jMax - 3), ijToCol[iMax - 2, 2, jMax]}, {iMax jMax - 1, ijToCol[iMax - 2, 2, jMax] + jMax - 3}] -> 
+           (4 - I \[CapitalDelta]rStar \[Omega]) / \[CapitalDelta]rStar^2, 
+          Band[{iMax jMax - 1 - (jMax - 3), ijToCol[iMax - 3, 2, jMax]}, {iMax jMax - 1, ijToCol[iMax - 3, 2, jMax] + jMax - 3}] -> 
+           -1 / \[CapitalDelta]rStar^2*)
+          
+          Band[{iMax jMax - 1 - (jMax - 3), iMax jMax - 1 - (jMax - 3)}, {iMax jMax - 1, iMax jMax - 1}] ->
+           ((10 + I*\[CapitalDelta]rStar*\[Omega]*(-35 + \[CapitalDelta]rStar*\[Omega]*(25*I + 4*\[CapitalDelta]rStar*\[Omega]))))/(4*\[CapitalDelta]rStar^3), 
+          Band[{iMax jMax - 1 - (jMax - 3), ijToCol[iMax - 1, 2, jMax]}, {iMax jMax - 1, ijToCol[iMax - 1, 2, jMax] + jMax - 3}] -> 
+           ((-9 + 2*\[CapitalDelta]rStar*\[Omega]*(13*I + 6*\[CapitalDelta]rStar*\[Omega])))/\[CapitalDelta]rStar^3, 
+          Band[{iMax jMax - 1 - (jMax - 3), ijToCol[iMax - 2, 2, jMax]}, {iMax jMax - 1, ijToCol[iMax - 2, 2, jMax] + jMax - 3}] -> 
+           - (3*(I + 2*\[CapitalDelta]rStar*\[Omega])*(8*I + 3*\[CapitalDelta]rStar*\[Omega]))/(2*\[CapitalDelta]rStar^3), 
+          Band[{iMax jMax - 1 - (jMax - 3), ijToCol[iMax - 3, 2, jMax]}, {iMax jMax - 1, ijToCol[iMax - 3, 2, jMax] + jMax - 3}] -> 
+           ((-7 + 2*\[CapitalDelta]rStar*\[Omega]*(7*I + 2*\[CapitalDelta]rStar*\[Omega])))/\[CapitalDelta]rStar^3, 
+          Band[{iMax jMax - 1 - (jMax - 3), ijToCol[iMax - 4, 2, jMax]}, {iMax jMax - 1, ijToCol[iMax - 4, 2, jMax] + jMax - 3}] -> 
+           -1/4*((3*I + \[CapitalDelta]rStar*\[Omega])*(2*I + 3*\[CapitalDelta]rStar*\[Omega]))/\[CapitalDelta]rStar^3
+           
+           }, Table[{ijToCol[i, 1, jMax], ijToCol[i, 1, jMax]} -> 1, {i, 1, iMax}],
+           Table[{ijToCol[i, jMax, jMax], ijToCol[i, jMax, jMax]} -> 1, {i, 1, iMax}]]
+           
       ]
       ,
       {iMax jMax, iMax jMax}
@@ -1127,51 +1151,52 @@ testSourceVector[m_, wtDiam_, thetaSourceSize_, \[CapitalDelta]rStar_, \[Capital
   ]
 
 
-getFm[sol_, m_, rStarList_, rSubrPlusList_, thetaList_, iSourceMin_, 
-  iSourceMax_, jSourceMin_, jSourceMax_] :=
-  Module[{solSource, \[CapitalPsi], d\[CapitalPsi]drStar, d\[CapitalPsi]d\[Theta], interp, interpDrStar, interpD\[Theta],
-     rStar, \[Theta], \[Omega], rPlus, iMax, jMax, \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], rStar0, r0, rSubrPlus0, 
-    d\[CapitalPhi]dr, d\[CapitalPhi]dt, d\[CapitalPhi]d\[Phi]},
+getFm[sol_, m_, rStarList_, rSubrPlusList_, thetaList_, iSourceMin_,   iSourceMax_, jSourceMin_, jSourceMax_] :=
+  Module[{solSource, \[CapitalPsi], d\[CapitalPsi]drStar, d\[CapitalPsi]d\[Theta], interp, interpDrStar, interpD\[Theta], rStar, \[Theta], \[Omega], rPlus, iMax, jMax, 
+   \[CapitalDelta]rStar, \[CapitalDelta]\[Theta], rStar0, r0, rSubrPlus0, d\[CapitalPhi]dr, d\[CapitalPhi]dt, d\[CapitalPhi]d\[Phi]},
+    (* initialize variables *)
     \[Omega] = m \[CapitalOmega];
-    rPlus = 1 + Sqrt[1 - a^2];
+    rPlus = 1 + Sqrt[1-a^2];
     iMax = Length[rStarList];
     jMax = Length[thetaList];
-    rStar0 = (rStarList[[(iSourceMax + iSourceMin - 1) / 2]] + rStarList[[
-      (iSourceMax + iSourceMin + 1) / 2]]) / 2;
-    rSubrPlus0 = (rSubrPlusList[[(iSourceMax + iSourceMin - 1) / 2]] 
-      + rSubrPlusList[[(iSourceMax + iSourceMin + 1) / 2]]) / 2;
+    rStar0 = ( rStarList[[(iSourceMax+iSourceMin-1)/2]] + rStarList[[(iSourceMax+iSourceMin+1)/2]] ) / 2;
+    rSubrPlus0 = ( rSubrPlusList[[(iSourceMax+iSourceMin-1)/2]] + rSubrPlusList[[(iSourceMax+iSourceMin+1)/2]] ) / 2;
     r0 = rSubrPlus0 + rPlus;
     \[CapitalDelta]rStar = (rStarList[[-1]] - rStarList[[1]]) / (iMax - 1);
     \[CapitalDelta]\[Theta] = (thetaList[[-1]] - thetaList[[1]]) / (jMax - 1);
-    solSource = Partition[sol, jMax];
-    interp[rStar_, \[Theta]_] = Interpolation[Flatten[Table[{rStarList[[i]],
-       thetaList[[j]], solSource[[i, j]]}, {i, (iSourceMax + iSourceMin - 1
-      ) / 2 - 1, (iSourceMax + iSourceMin + 1) / 2 + 1}, {j, (jSourceMax + 
-      jSourceMin - 1) / 2 - 1, (jSourceMax + jSourceMin + 1) / 2 + 1}], 1],
-       InterpolationOrder -> 3][rStar, \[Theta]];
+    (* "sol" is the vector solution of the matrix problem containing all field values *)
+    solSource = Partition[sol, jMax]; (* make 2D array indexed for rStar and theta *)
+    (* interpolate to get derivatives at particle *)
+    interp[rStar_, \[Theta]_] = Interpolation[Flatten[Table[
+        {rStarList[[i]], thetaList[[j]], solSource[[i, j]]}
+        , {i, (iSourceMax+iSourceMin-1)/2 - 1, (iSourceMax+iSourceMin+1)/2 + 1}
+        , {j, (jSourceMax+jSourceMin-1)/2 - 1, (jSourceMax+jSourceMin+1)/2 + 1}]
+      , 1], InterpolationOrder -> 3][rStar, \[Theta]];
     interpDrStar[rStar_, \[Theta]_] = D[interp[rStar, \[Theta]], rStar];
-    \[CapitalPsi] = interp[rStar0, \[Pi] / 2];
-    d\[CapitalPsi]drStar = interpDrStar[rStar0, \[Pi] / 2];
+    \[CapitalPsi] = interp[rStar0, \[Pi]/2];
+    d\[CapitalPsi]drStar = interpDrStar[rStar0, \[Pi]/2];
+    (* Print[d\[CapitalPsi]drStar]; *)
+    (* The gradient of the regularized field is the self-force *)
+    (* Need to convert rStar detivatives to r derivatives *)
     d\[CapitalPhi]dr =
       If[m == 0,
-        Re[drStardr[a, rSubrPlus0] d\[CapitalPsi]drStar / r0 - \[CapitalPsi] / r0^2]
+        Re[drStardr[a,rSubrPlus0] d\[CapitalPsi]drStar/r0 - \[CapitalPsi]/r0^2]
         ,
-        2 Re[(drStardr[a, rSubrPlus0] d\[CapitalPsi]drStar / r0 + \[CapitalPsi] (I m d\[CapitalDelta]\[Phi]dr[a,
-           rSubrPlus0] / r0 - 1 / r0^2)) Exp[I m \[CapitalDelta]\[Phi][a, rSubrPlus0]]]
+        2 Re[ (drStardr[a,rSubrPlus0] d\[CapitalPsi]drStar/r0 + \[CapitalPsi](I m d\[CapitalDelta]\[Phi]dr[a,rSubrPlus0]/r0 - 1/r0^2))Exp[I m \[CapitalDelta]\[Phi][a,rSubrPlus0]] ]
       ];
     d\[CapitalPhi]dt =
       If[m == 0,
         0
         ,
-        2 Re[-I \[Omega] \[CapitalPsi] Exp[I m \[CapitalDelta]\[Phi][a, rSubrPlus0]]] / r0
+        2 Re[-I \[Omega] \[CapitalPsi] Exp[I m \[CapitalDelta]\[Phi][a,rSubrPlus0]]] / r0
       ];
     d\[CapitalPhi]d\[Phi] =
       If[m == 0,
         0
         ,
-        2 Re[I m \[CapitalPsi] Exp[I m \[CapitalDelta]\[Phi][a, rSubrPlus0]]] / r0
+        2 Re[I m \[CapitalPsi] Exp[I m \[CapitalDelta]\[Phi][a,rSubrPlus0]]] / r0
       ];
-    {d\[CapitalPhi]dt, d\[CapitalPhi]dr, d\[CapitalPhi]d\[Phi]}
+    Return[{d\[CapitalPhi]dt, d\[CapitalPhi]dr, d\[CapitalPhi]d\[Phi]}]
   ]
 
 
